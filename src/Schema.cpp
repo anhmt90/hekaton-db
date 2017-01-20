@@ -1,6 +1,15 @@
 #include "Schema.hpp"
 #include "Attribute.hpp"
 
+//#include <fstream>
+//#include <sstream>
+//#include <iostream>
+//#include <string>
+//#include <tuple>
+//#include <unordered_map>
+//#include <map>
+//#include <utility>
+//#include <vector>
 
 vector<Table> tables;
 /*----------------------------------------Supporting functions-----------------------------------------------------------*/
@@ -29,9 +38,9 @@ extern "C" TPCC::TPCC(){
 
 TPCC::~TPCC() { }
 
-void TPCC::Warehouse_Insert(Integer w_id, Warehouse_Row &row) {
-	if(warehouse_ix.insert(make_pair(w_id, warehouse.size())).second)
-		warehouse.push_back(row);
+void TPCC::Warehouse_Insert(Integer w_id, Warehouse_Tuple &row) {
+	if(!warehouse.insert(make_pair(w_id, *(new Warehouse_Version(row)))).second)
+		throw ;
 }
 
 void TPCC::Warehouse_Import(ifstream& itbl) {
@@ -39,7 +48,7 @@ void TPCC::Warehouse_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			Warehouse_Row row;
+			Warehouse_Tuple row;
 			row.w_id = Integer::castString(elm[0].c_str(), elm[0].length());
 			string anh = to_string(1);
 
@@ -51,8 +60,7 @@ void TPCC::Warehouse_Import(ifstream& itbl) {
 			row.w_zip = row.w_zip.castString(elm[6].c_str(), elm[6].length());
 			row.w_tax = row.w_tax.castString(elm[7].c_str(), elm[7].length());
 			row.w_ytd = row.w_ytd.castString(elm[8].c_str(), elm[8].length());
-			warehouse.push_back(row);
-			warehouse_ix.insert(make_pair(row.w_id,warehouse.size()-1));
+			warehouse.insert(make_pair(row.w_id,warehouse.size()-1));
 
 		}
 		tables.back().attributes.push_back(Attribute("w_id","Integer","warehouse"));
@@ -67,7 +75,7 @@ void TPCC::Warehouse_Import(ifstream& itbl) {
 	}
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::District_Insert(tup_2Int tup, District_Row &row) {
+void TPCC::District_Insert(tup_2Int tup, District_Tuple &row) {
 	if(district_ix.insert(make_pair(tup, district.size())).second)
 		district.push_back(row);
 }
@@ -78,7 +86,7 @@ void TPCC::District_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			District_Row row;
+			District_Tuple row;
 			row.d_id = row.d_id.castString(elm[0].c_str(), elm[0].length());
 			row.d_w_id = row.d_w_id.castString(elm[1].c_str(), elm[1].length());
 			auto tup = make_tuple(row.d_id, row.d_w_id);
@@ -109,7 +117,7 @@ void TPCC::District_Import(ifstream& itbl) {
 	}
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::Customer_Insert(tup_3Int tup, Customer_Row& row) {
+void TPCC::Customer_Insert(tup_3Int tup, Customer_Tuple& row) {
 	if(customer_ix.insert(make_pair(tup, customer.size())).second)
 		customer.push_back(row);
 }
@@ -119,7 +127,7 @@ void TPCC::Customer_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			Customer_Row row;
+			Customer_Tuple row;
 			row.c_id = row.c_id.castString(elm[0].c_str(), elm[0].length());
 			row.c_d_id = row.c_d_id.castString(elm[1].c_str(), elm[1].length());
 			row.c_w_id = row.c_w_id.castString(elm[2].c_str(), elm[2].length());
@@ -170,7 +178,7 @@ void TPCC::Customer_Import(ifstream& itbl) {
 	}
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::History_Insert(History_Row& row) {
+void TPCC::History_Insert(History_Tuple& row) {
 	history.push_back(row);
 }
 
@@ -179,7 +187,7 @@ void TPCC::History_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			History_Row row;
+			History_Tuple row;
 			row.h_c_id = row.h_c_id.castString(elm[0].c_str(), elm[0].length());
 			row.h_c_d_id = row.h_c_d_id.castString(elm[1].c_str(), elm[1].length());
 			row.h_c_w_id = row.h_c_w_id.castString(elm[2].c_str(), elm[2].length());
@@ -194,7 +202,7 @@ void TPCC::History_Import(ifstream& itbl) {
 	}
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::NewOrder_Insert(tup_3Int tup, NewOrder_Row row) {
+void TPCC::NewOrder_Insert(tup_3Int tup, NewOrder_Tuple row) {
 	if(neworder_ix.insert(make_pair(tup, neworder.size())).second)
 		neworder.push_back(row);
 
@@ -205,7 +213,7 @@ void TPCC::NewOrder_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			NewOrder_Row row;
+			NewOrder_Tuple row;
 			row.no_o_id = row.no_o_id.castString(elm[0].c_str(), elm[0].length());
 			row.no_d_id = row.no_d_id.castString(elm[1].c_str(), elm[1].length());
 			row.no_w_id = row.no_w_id.castString(elm[2].c_str(), elm[2].length());
@@ -219,7 +227,7 @@ void TPCC::NewOrder_Import(ifstream& itbl) {
 	}
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::Order_Insert(tup_3Int tup, Order_Row& row) {
+void TPCC::Order_Insert(tup_3Int tup, Order_Tuple& row) {
 	bool done = order_ix.insert(make_pair(tup, order.size())).second;
 	if(done)
 		order.push_back(row);
@@ -230,7 +238,7 @@ inline void TPCC::Order_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			Order_Row row;
+			Order_Tuple row;
 
 			row.o_id = row.o_id.castString(elm[0].c_str(), elm[0].length());
 			row.o_d_id = row.o_d_id.castString(elm[1].c_str(), elm[1].length());
@@ -259,7 +267,7 @@ inline void TPCC::Order_Import(ifstream& itbl) {
 	}
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::OrderLine_Insert(tup_4Int tup, OrderLine_Row row) {
+void TPCC::OrderLine_Insert(tup_4Int tup, OrderLine_Tuple row) {
 	if(orderline_ix.insert(make_pair(tup, orderline.size())).second)
 		orderline.push_back(row);
 
@@ -270,7 +278,7 @@ inline void TPCC::OrderLine_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			OrderLine_Row row;
+			OrderLine_Tuple row;
 			row.ol_o_id = (new Integer)->castString(elm[0].c_str(), elm[0].length()).value;
 			row.ol_d_id = row.ol_d_id.castString(elm[1].c_str(), elm[1].length());
 			row.ol_w_id = row.ol_w_id.castString(elm[2].c_str(), elm[2].length());
@@ -301,7 +309,7 @@ inline void TPCC::OrderLine_Import(ifstream& itbl) {
 	}
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::Item_Insert(Integer i_id, Item_Row& row) {
+void TPCC::Item_Insert(Integer i_id, Item_Tuple& row) {
 	if(item_ix.insert(make_pair(i_id, item.size())).second)
 		item.push_back(row);
 }
@@ -311,7 +319,7 @@ void TPCC::Item_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			Item_Row row;
+			Item_Tuple row;
 			row.i_id = row.i_id.castString(elm[0].c_str(), elm[0].length());
 
 			row.i_im_id = row.i_im_id.castString(elm[1].c_str(), elm[1].length());
@@ -331,7 +339,7 @@ void TPCC::Item_Import(ifstream& itbl) {
 }
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::Stock_Insert(tup_2Int tup, Stock_Row& row) {
+void TPCC::Stock_Insert(tup_2Int tup, Stock_Tuple& row) {
 	if(stock_ix.insert(make_pair(tup, stock.size())).second)
 		stock.push_back(row);
 }
@@ -341,7 +349,7 @@ inline void TPCC::Stock_Import(ifstream& itbl) {
 	if (itbl.is_open()) {
 		while (getline(itbl, line)) {
 			vector<string> elm = split(line);
-			Stock_Row row;
+			Stock_Tuple row;
 			row.s_i_id = row.s_i_id.castString(elm[0].c_str(), elm[0].length());
 			row.s_w_id = row.s_w_id.castString(elm[1].c_str(), elm[1].length());
 
@@ -389,7 +397,7 @@ inline void TPCC::Stock_Import(ifstream& itbl) {
 }
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
-//std::ostream& operator<<(std::ostream& out,const w_Row& value);
+//std::ostream& operator<<(std::ostream& out,const w_Tuple& value);
 //For the two indexes
 
 void TPCC::_importIndex(){

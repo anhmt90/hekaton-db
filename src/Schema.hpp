@@ -22,6 +22,8 @@
 
 #include "Types.hpp"
 #include "Table.hpp"
+#include "Version.hpp"
+
 using namespace std;
 using namespace std::chrono;
 //using namespace types;
@@ -141,7 +143,7 @@ void _delete(Relation rel, PKey key){
 }
 /*--------------------------------Define structure of a row for each table-----------------------------------*/
 
-struct Warehouse_Row {
+struct Warehouse_Tuple {
 	Integer w_id;
 	Varchar<10> w_name;
 	Varchar<20> w_street_1, w_street_2, w_city;
@@ -150,9 +152,9 @@ struct Warehouse_Row {
 	Numeric<4, 4> w_tax;
 	Numeric<12, 2> w_ytd;
 
-	Warehouse_Row(){}
+	Warehouse_Tuple(){}
 
-	Warehouse_Row(
+	Warehouse_Tuple(
 			Integer id,
 			Varchar<10> name,
 			Varchar<20> street_1,
@@ -167,7 +169,7 @@ struct Warehouse_Row {
 		w_state(state), w_zip(zip), w_tax(tax), w_ytd(ytd){ }
 };
 
-struct District_Row {
+struct District_Tuple {
 	Integer d_id, d_w_id; //PKey
 	Varchar<10> d_name;
 	Varchar<20> d_street_1, d_street_2, d_city;
@@ -177,9 +179,9 @@ struct District_Row {
 	Numeric<12, 2> d_ytd;
 	Integer d_next_o_id;
 
-	District_Row(){}
+	District_Tuple(){}
 
-	District_Row(
+	District_Tuple(
 			Integer id,
 			Integer w_id,
 			Varchar<10> name,
@@ -199,7 +201,7 @@ struct District_Row {
 
 };
 
-struct Customer_Row {
+struct Customer_Tuple {
 	Integer c_id, c_d_id, c_w_id; //Pkey
 	Varchar<16> c_first;
 	Char<2> c_middle;
@@ -216,9 +218,9 @@ struct Customer_Row {
 	Numeric<4, 0> c_payment_cnt, c_delivery_cnt;
 	Varchar<500> c_data;
 
-	Customer_Row(){}
+	Customer_Tuple(){}
 
-	Customer_Row(
+	Customer_Tuple(
 			Integer id,
 			Integer d_id,
 			Integer w_id,
@@ -250,15 +252,15 @@ struct Customer_Row {
 		c_payment_cnt(payment_cnt), c_delivery_cnt(delivery_cnt), c_data(data){ }
 };
 
-struct History_Row {
+struct History_Tuple {
 	Integer h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id;
 	Timestamp h_date;
 	Numeric<6, 2> h_amount;
 	Varchar<24> h_data;
 
-	History_Row(){}
+	History_Tuple(){}
 
-	History_Row(	Integer c_id,
+	History_Tuple(	Integer c_id,
 			Integer c_d_id,
 			Integer c_w_id,
 			Integer d_id,
@@ -275,18 +277,18 @@ struct History_Row {
 
 };
 
-struct NewOrder_Row {
+struct NewOrder_Tuple {
 	Integer no_o_id, no_d_id, no_w_id; //Pkey
 
-	NewOrder_Row(){}
+	NewOrder_Tuple(){}
 
-	NewOrder_Row(Integer o_id, Integer d_id, Integer w_id):
+	NewOrder_Tuple(Integer o_id, Integer d_id, Integer w_id):
 		no_o_id(o_id), no_d_id(d_id), no_w_id(w_id){
 
 	}
 };
 
-struct Order_Row {
+struct Order_Tuple {
 	Integer o_id, o_d_id, o_w_id; //Pkey
 	Integer o_c_id;
 	Timestamp o_entry_d;
@@ -294,9 +296,9 @@ struct Order_Row {
 	Numeric<2, 0> o_ol_cnt;
 	Numeric<1, 0> o_all_local;
 
-	Order_Row(){}
+	Order_Tuple(){}
 
-	Order_Row(
+	Order_Tuple(
 			Integer id,
 			Integer d_id,
 			Integer w_id,
@@ -313,7 +315,7 @@ struct Order_Row {
 	}
 };
 
-struct OrderLine_Row {
+struct OrderLine_Tuple {
 	Integer ol_o_id, ol_d_id, ol_w_id, ol_number; //Pkey
 	Integer ol_i_id, ol_supply_w_id;
 	Timestamp ol_delivery_d;
@@ -321,9 +323,9 @@ struct OrderLine_Row {
 	Numeric<6, 2> ol_amount;
 	Char<24> ol_dist_info;
 
-	OrderLine_Row(){}
+	OrderLine_Tuple(){}
 
-	OrderLine_Row(
+	OrderLine_Tuple(
 			Integer o_id,
 			Integer d_id,
 			Integer w_id,
@@ -342,8 +344,8 @@ struct OrderLine_Row {
 	}
 };
 
-struct Item_Row {
-	//uno_Rowed_map<Integer, Integer> i_id;
+struct Item_Tuple {
+	//uno_Tupleed_map<Integer, Integer> i_id;
 	Integer i_id;	//Pkey
 	Integer i_im_id;
 	Varchar<24> i_name;
@@ -351,9 +353,9 @@ struct Item_Row {
 	Varchar<50> i_data;
 
 
-	Item_Row(){}
+	Item_Tuple(){}
 
-	Item_Row(
+	Item_Tuple(
 			Integer id,
 			Integer im_id,
 			Varchar<24> name,
@@ -365,7 +367,7 @@ struct Item_Row {
 			i_data(data){ }
 };
 
-struct Stock_Row {
+struct Stock_Tuple {
 	Integer s_i_id, s_w_id; //Pkey
 	Numeric<4, 0> s_quantity;
 	Char<24> s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06,
@@ -374,9 +376,9 @@ struct Stock_Row {
 	Numeric<4, 0> s_order_cnt, s_remote_cnt;
 	Varchar<50> s_data;
 
-	Stock_Row(){}
+	Stock_Tuple(){}
 
-	Stock_Row(
+	Stock_Tuple(
 			Integer i_id,
 			Integer w_id,
 			Numeric<4, 0> quantity,
@@ -399,7 +401,7 @@ struct Stock_Row {
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
 
-//void w_Insert(vector<string>, unordered_map<Integer, w_Row>);
+//void w_Insert(vector<string>, unordered_map<Integer, w_Tuple>);
 
 
 
@@ -442,14 +444,14 @@ inline std::ostream& operator<<(std::ostream& s,
 /*----------------------------------------Supporting functions-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
-//typedef vector<w_Row> Warehouse;
-//typedef vector<d_Row> District;
-//typedef vector<c_Row> Customer;
-//typedef vector<h_Row> History;
-//typedef vector<no_Row> NewOrder;
-//typedef vector<o_Row> OrderLine;
-//typedef vector<i_Row> Index;
-//typedef vector<s_Row> Stock;
+//typedef vector<w_Tuple> Warehouse;
+//typedef vector<d_Tuple> District;
+//typedef vector<c_Tuple> Customer;
+//typedef vector<h_Tuple> History;
+//typedef vector<no_Tuple> NewOrder;
+//typedef vector<o_Tuple> OrderLine;
+//typedef vector<i_Tuple> Index;
+//typedef vector<s_Tuple> Stock;
 //
 //typedef unordered_map<Integer, size_t> warehouse;
 //typedef unordered_map<tuple<Integer, Integer>, size_t> district;
@@ -463,69 +465,63 @@ inline std::ostream& operator<<(std::ostream& s,
 extern vector<Table> tables;
 
 struct TPCC {
-	vector<Warehouse_Row> warehouse;
-	vector<District_Row> district;
-	vector<Customer_Row> customer;
-	vector<History_Row> history;
-	vector<NewOrder_Row> neworder;
-	vector<Order_Row> order;
-	vector<OrderLine_Row> orderline;
-	vector<Item_Row> item;
-	vector<Stock_Row> stock;
 
-	unordered_map<Integer, size_t> warehouse_ix;
-	unordered_map<tuple<Integer, Integer>, size_t> district_ix;
-	unordered_map<tuple<Integer, Integer, Integer>, size_t> customer_ix;
-	unordered_map<tuple<Integer, Integer, Integer>, size_t> neworder_ix;
-	unordered_map<tuple<Integer, Integer, Integer>, size_t> order_ix;
-	unordered_map<tuple<Integer, Integer, Integer, Integer>, size_t> orderline_ix;
-	unordered_map<Integer, size_t> item_ix;
-	unordered_map<tuple<Integer, Integer>, size_t> stock_ix;
-
-
+	/*
+	 * Primary key indexes of each table as unordered_map
+	 * with key part is the primary key and value part is
+	 * index-number on the vector of the table.
+	 */
+	unordered_map<Integer, Warehouse_Version> warehouse;
+	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
+	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
+	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
+	unordered_map<tuple<Integer, Integer, Integer>, Order_Tuple> order;
+	unordered_map<tuple<Integer, Integer, Integer, Integer>, OrderLine_Tuple> orderline;
+	unordered_map<Integer, Item_Tuple> item;
+	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
 	TPCC();
 
 	~TPCC();
 
-	void Warehouse_Insert(Integer , Warehouse_Row &);
+	void Warehouse_Insert(Integer , Warehouse_Tuple &);
 
 	void Warehouse_Import(ifstream& );
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void District_Insert(tup_2Int, District_Row&);
+	void District_Insert(tup_2Int, District_Tuple&);
 
 	void District_Import(ifstream&);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Customer_Insert(tup_3Int, Customer_Row&);
+	void Customer_Insert(tup_3Int, Customer_Tuple&);
 
 	inline void Customer_Import(ifstream&);
 	/*----------------------------------------------------------------------------------------------------------------------*/
-	void History_Insert(History_Row&);
+	void History_Insert(History_Tuple&);
 
 	void History_Import(ifstream&);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void NewOrder_Insert(tup_3Int, NewOrder_Row);
+	void NewOrder_Insert(tup_3Int, NewOrder_Tuple);
 
 	inline void NewOrder_Import(ifstream&);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Order_Insert(tup_3Int, Order_Row&);
+	void Order_Insert(tup_3Int, Order_Tuple&);
 
 	inline void Order_Import(ifstream&);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void OrderLine_Insert(tup_4Int, OrderLine_Row);
+	void OrderLine_Insert(tup_4Int, OrderLine_Tuple);
 
 	inline void OrderLine_Import(ifstream&);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Item_Insert(Integer, Item_Row&);
+	void Item_Insert(Integer, Item_Tuple&);
 
 	void Item_Import(ifstream&);
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Stock_Insert(tup_2Int, Stock_Row&);
+	void Stock_Insert(tup_2Int, Stock_Tuple&);
 
 	void Stock_Import(ifstream&);
 
 	/*-----------------------------------------------------------------------------------------------------------------------*/
-	//std::ostream& operator<<(std::ostream& out,const w_Row& value);
+	//std::ostream& operator<<(std::ostream& out,const w_Tuple& value);
 	//For the two indexes
 
 	void _importIndex();

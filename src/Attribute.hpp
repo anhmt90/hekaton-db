@@ -17,16 +17,16 @@ using namespace std;
 
 
 
-struct Attribute{
+struct Attribute {
 	string name;
 	string type;
 	string tablename;
-	bool notNull;
-	Attribute(): notNull(true){	}
-	Attribute(string name):name(name),notNull(true){ }
+
+	Attribute(){	}
+	Attribute(string name):name(name){ }
 
 	Attribute(string name, string type, string tablename):
-		name(name), type(type), tablename(tablename), notNull(true){ }
+		name(name), type(type), tablename(tablename){ }
 	~Attribute(){ };
 
 	bool operator< (const Attribute& attr) const {

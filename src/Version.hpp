@@ -6,12 +6,17 @@
  */
 
 class Version {
-	double begin;
-	double end;
+	uint64_t begin;
+	uint64_t end;
 	Version* next;
+
+	bool isGarbage = false;
 };
 
 class Warehouse_Version : public Version {
-	Warehouse_Row payload;
+	Warehouse_Tuple payload;
 
+	Warehouse_Version(Warehouse_Tuple* payload): payload(*payload)
+	{ }
 };
+
