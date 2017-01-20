@@ -106,41 +106,41 @@ struct hash<tuple<Integer, Integer, Varchar<16>, Varchar<16>>> {
 //};
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
-template<typename Relation, typename Index, typename PKey, typename Row>
-void _insert(Relation rel, Index index, PKey key, Row row){
-	rel.push_back(row);
-	index.insert(make_pair(key, row));
-}
-
-template<typename Index, typename PKey>
-bool _find(Index index, PKey key){
-	try {
-		index.at(key);
-		return true;
-	}
-	catch(out_of_range& oor){
-		return false;
-	};
-}
-
-template<typename Relation, typename Index, typename PKey, typename Row>
-Row* _select(Relation rel, Index index, PKey key){
-	try{
-		return &rel[index.at(key)];
-	} catch(out_of_range& e){
-		cerr << e.what() << "\n";
-		return nullptr;
-	}
-}
-template<typename Attribute, typename Value>
-void _update(Attribute *attr, Value val){
-	*attr = val;
-}
-
-template<typename Relation, typename PKey>
-void _delete(Relation rel, PKey key){
-	rel.erease(key);
-}
+//template<typename Relation, typename Index, typename PKey, typename Row>
+//void _insert(Relation rel, Index index, PKey key, Row row){
+//	rel.push_back(row);
+//	index.insert(make_pair(key, row));
+//}
+//
+//template<typename Index, typename PKey>
+//bool _find(Index index, PKey key){
+//	try {
+//		index.at(key);
+//		return true;
+//	}
+//	catch(out_of_range& oor){
+//		return false;
+//	};
+//}
+//
+//template<typename Relation, typename Index, typename PKey, typename Row>
+//Row* _select(Relation rel, Index index, PKey key){
+//	try{
+//		return &rel[index.at(key)];
+//	} catch(out_of_range& e){
+//		cerr << e.what() << "\n";
+//		return nullptr;
+//	}
+//}
+//template<typename Attribute, typename Value>
+//void _update(Attribute *attr, Value val){
+//	*attr = val;
+//}
+//
+//template<typename Relation, typename PKey>
+//void _delete(Relation rel, PKey key){
+//	rel.erease(key);
+//}
 /*--------------------------------Define structure of a row for each table-----------------------------------*/
 
 struct Warehouse_Tuple {
@@ -418,29 +418,29 @@ struct Stock_Tuple {
 
 
 
-inline std::ostream& operator<<(std::ostream& s,
-                       const std::tuple<Integer, Integer>& t) {
-  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," << ")";
-  return s;
-}
-inline std::ostream& operator<<(std::ostream& s,
-                       const std::tuple<Integer, Integer, Integer>& t) {
-  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
-      std::get<2>(t) << ")";
-  return s;
-}
-inline std::ostream& operator<<(std::ostream& s,
-                       const std::tuple<Integer, Integer, Integer, Integer>& t) {
-  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
-	      std::get<2>(t) << std::get<3>(t) << ")";
-  return s;
-}
-inline std::ostream& operator<<(std::ostream& s,
-                       const std::tuple<Integer, Integer, Varchar<16>, Varchar<16>>& t) {
-  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
-	      std::get<2>(t) << std::get<3>(t) << ")";
-  return s;
-}
+//inline std::ostream& operator<<(std::ostream& s,
+//                       const std::tuple<Integer, Integer>& t) {
+//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," << ")";
+//  return s;
+//}
+//inline std::ostream& operator<<(std::ostream& s,
+//                       const std::tuple<Integer, Integer, Integer>& t) {
+//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
+//      std::get<2>(t) << ")";
+//  return s;
+//}
+//inline std::ostream& operator<<(std::ostream& s,
+//                       const std::tuple<Integer, Integer, Integer, Integer>& t) {
+//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
+//	      std::get<2>(t) << std::get<3>(t) << ")";
+//  return s;
+//}
+//inline std::ostream& operator<<(std::ostream& s,
+//                       const std::tuple<Integer, Integer, Varchar<16>, Varchar<16>>& t) {
+//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
+//	      std::get<2>(t) << std::get<3>(t) << ")";
+//  return s;
+//}
 /*----------------------------------------Supporting functions-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
@@ -476,7 +476,7 @@ struct TPCC {
 	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
 	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
 	unordered_map<tuple<Integer, Integer, Integer>, Order_Tuple> order;
-	unordered_map<tuple<Integer, Integer, Integer, Integer>, OrderLine_Tuple> orderline;
+	unordered_map<tuple<Integer, Integer, Integer, Integer>, OrderLine_Version> orderline;
 	unordered_map<Integer, Item_Tuple> item;
 	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
@@ -487,44 +487,44 @@ struct TPCC {
 	void Warehouse_Insert(Integer , Warehouse_Tuple &);
 
 	void Warehouse_Import(ifstream& );
-	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void District_Insert(tup_2Int, District_Tuple&);
-
-	void District_Import(ifstream&);
-	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Customer_Insert(tup_3Int, Customer_Tuple&);
-
-	inline void Customer_Import(ifstream&);
-	/*----------------------------------------------------------------------------------------------------------------------*/
-	void History_Insert(History_Tuple&);
-
-	void History_Import(ifstream&);
-	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void NewOrder_Insert(tup_3Int, NewOrder_Tuple);
-
-	inline void NewOrder_Import(ifstream&);
-	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Order_Insert(tup_3Int, Order_Tuple&);
-
-	inline void Order_Import(ifstream&);
-	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	void District_Insert(tup_2Int, District_Tuple&);
+//
+//	void District_Import(ifstream&);
+//	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	void Customer_Insert(tup_3Int, Customer_Tuple&);
+//
+//	inline void Customer_Import(ifstream&);
+//	/*----------------------------------------------------------------------------------------------------------------------*/
+//	void History_Insert(History_Tuple&);
+//
+//	void History_Import(ifstream&);
+//	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	void NewOrder_Insert(tup_3Int, NewOrder_Tuple);
+//
+//	inline void NewOrder_Import(ifstream&);
+//	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	void Order_Insert(tup_3Int, Order_Tuple&);
+//
+//	inline void Order_Import(ifstream&);
+//	/*-----------------------------------------------------------------------------------------------------------------------*/
 	void OrderLine_Insert(tup_4Int, OrderLine_Tuple);
 
 	inline void OrderLine_Import(ifstream&);
-	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Item_Insert(Integer, Item_Tuple&);
-
-	void Item_Import(ifstream&);
-	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void Stock_Insert(tup_2Int, Stock_Tuple&);
-
-	void Stock_Import(ifstream&);
+//	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	void Item_Insert(Integer, Item_Tuple&);
+//
+//	void Item_Import(ifstream&);
+//	/*-----------------------------------------------------------------------------------------------------------------------*/
+//	void Stock_Insert(tup_2Int, Stock_Tuple&);
+//
+//	void Stock_Import(ifstream&);
 
 	/*-----------------------------------------------------------------------------------------------------------------------*/
 	//std::ostream& operator<<(std::ostream& out,const w_Tuple& value);
 	//For the two indexes
 
-	void _importIndex();
+//	void _importIndex();
 	void _import();
 
 

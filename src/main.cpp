@@ -19,11 +19,10 @@
 #include "Schema.hpp"
 
 //Global, monotonically increasing counter
-extern static uint64_t GMI_cnt = 0;
+extern uint64_t GMI_cnt = 0;
 
 int main(int argc, char* argv[]) {
-	TPCC schema = new TPCC();
-	//test git
+	TPCC* tpcc = new TPCC();
 }
 
 
