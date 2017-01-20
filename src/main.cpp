@@ -23,7 +23,7 @@ extern static uint64_t GMI_cnt = 0;
 
 int main(int argc, char* argv[]) {
 	TPCC schema = new TPCC();
-	//test git
+	
 }
 
 
