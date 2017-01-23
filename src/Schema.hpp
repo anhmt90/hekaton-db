@@ -32,6 +32,16 @@ typedef tuple<Integer, Integer> tup_2Int;
 typedef tuple<Integer, Integer, Integer> tup_3Int;
 typedef tuple<Integer, Integer, Integer, Integer> tup_4Int;
 
+/*---------------------------------------------------------Global Variables/Function----------------------------------------------------------*/
+//Global, monotonically increasing counter
+extern uint64_t GMI_cnt;
+extern uint64_t getTimestamp();
+/*---------------------------------------------------------Supporting functions------------------------------------------------------*/
+
+void close_ifstream(ifstream& itbl);
+vector<string> split(const string &s);
+
+
 /*-----------------------------------------------------------------------------------------------------------------------*/
 namespace std {
 
@@ -105,45 +115,25 @@ struct hash<tuple<Integer, Integer, Varchar<16>, Varchar<16>>> {
 //	}
 //};
 
-/*-----------------------------------------------------------------------------------------------------------------------*/
-//template<typename Relation, typename Index, typename PKey, typename Row>
-//void _insert(Relation rel, Index index, PKey key, Row row){
-//	rel.push_back(row);
-//	index.insert(make_pair(key, row));
-//}
-//
-//template<typename Index, typename PKey>
-//bool _find(Index index, PKey key){
-//	try {
-//		index.at(key);
-//		return true;
-//	}
-//	catch(out_of_range& oor){
-//		return false;
-//	};
-//}
-//
-//template<typename Relation, typename Index, typename PKey, typename Row>
-//Row* _select(Relation rel, Index index, PKey key){
-//	try{
-//		return &rel[index.at(key)];
-//	} catch(out_of_range& e){
-//		cerr << e.what() << "\n";
-//		return nullptr;
-//	}
-//}
-//template<typename Attribute, typename Value>
-//void _update(Attribute *attr, Value val){
-//	*attr = val;
-//}
-//
-//template<typename Relation, typename PKey>
-//void _delete(Relation rel, PKey key){
-//	rel.erease(key);
-//}
 /*--------------------------------Define structure of a row for each table-----------------------------------*/
+struct Version {
+	uint64_t begin;
+	uint64_t end;
+//	Version* next;
 
-struct Warehouse_Tuple {
+	bool isGarbage = false;
+
+	void setBegin(){
+		this->begin = getTimestamp();
+	}
+
+	void setEnd(){
+		this->end = getTimestamp();
+	}
+};
+
+
+struct Warehouse_Tuple : public Version{
 	Integer w_id;
 	Varchar<10> w_name;
 	Varchar<20> w_street_1, w_street_2, w_city;
@@ -152,7 +142,9 @@ struct Warehouse_Tuple {
 	Numeric<4, 4> w_tax;
 	Numeric<12, 2> w_ytd;
 
-	Warehouse_Tuple(){}
+	Warehouse_Tuple(){
+		setBegin();
+	}
 
 	Warehouse_Tuple(
 			Integer id,
@@ -398,70 +390,6 @@ struct Stock_Tuple {
 };
 /*-----------------------------------------------------------------------------------------------------------------------*/
 
-
-/*-----------------------------------------------------------------------------------------------------------------------*/
-
-//void w_Insert(vector<string>, unordered_map<Integer, w_Tuple>);
-
-
-
-
-//template<typename T>
-//void _Import(ifstream itbl&, elm, T x){
-//	string line;
-//	if (itbl.is_open()) {
-//		while (getline(itbl, line)) {
-//			w_Insert(split(line), w);
-//		}
-//	}
-//}
-
-
-
-//inline std::ostream& operator<<(std::ostream& s,
-//                       const std::tuple<Integer, Integer>& t) {
-//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," << ")";
-//  return s;
-//}
-//inline std::ostream& operator<<(std::ostream& s,
-//                       const std::tuple<Integer, Integer, Integer>& t) {
-//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
-//      std::get<2>(t) << ")";
-//  return s;
-//}
-//inline std::ostream& operator<<(std::ostream& s,
-//                       const std::tuple<Integer, Integer, Integer, Integer>& t) {
-//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
-//	      std::get<2>(t) << std::get<3>(t) << ")";
-//  return s;
-//}
-//inline std::ostream& operator<<(std::ostream& s,
-//                       const std::tuple<Integer, Integer, Varchar<16>, Varchar<16>>& t) {
-//  s << "(" << std::get<0>(t) << "," << std::get<1>(t) << "," <<
-//	      std::get<2>(t) << std::get<3>(t) << ")";
-//  return s;
-//}
-/*----------------------------------------Supporting functions-----------------------------------------------------------*/
-
-/*-----------------------------------------------------------------------------------------------------------------------*/
-//typedef vector<w_Tuple> Warehouse;
-//typedef vector<d_Tuple> District;
-//typedef vector<c_Tuple> Customer;
-//typedef vector<h_Tuple> History;
-//typedef vector<no_Tuple> NewOrder;
-//typedef vector<o_Tuple> OrderLine;
-//typedef vector<i_Tuple> Index;
-//typedef vector<s_Tuple> Stock;
-//
-//typedef unordered_map<Integer, size_t> warehouse;
-//typedef unordered_map<tuple<Integer, Integer>, size_t> district;
-//typedef unordered_map<tuple<Integer, Integer, Integer>, size_t> customer;
-//typedef unordered_map<tuple<Integer, Integer, Integer>, size_t> neworder;
-//typedef unordered_map<tuple<Integer, Integer, Integer>, size_t> order;
-//typedef unordered_map<tuple<Integer, Integer, Integer, Integer>, size_t> orderline;
-//typedef unordered_map<Integer, size_t> item;
-//typedef unordered_map<tuple<Integer, Integer>, size_t> stock;
-
 extern vector<Table> tables;
 
 struct TPCC {
@@ -471,14 +399,14 @@ struct TPCC {
 	 * with key part is the primary key and value part is
 	 * index-number on the vector of the table.
 	 */
-	unordered_map<Integer, Warehouse_Version> warehouse;
-	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
-	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
-	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
-	unordered_map<tuple<Integer, Integer, Integer>, Order_Tuple> order;
-	unordered_map<tuple<Integer, Integer, Integer, Integer>, OrderLine_Version> orderline;
-	unordered_map<Integer, Item_Tuple> item;
-	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
+	unordered_map<Integer, Warehouse_Tuple> warehouse;
+//	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
+//	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
+//	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
+//	unordered_map<tuple<Integer, Integer, Integer>, Order_Tuple> order;
+//	unordered_map<tuple<Integer, Integer, Integer, Integer>, OrderLine_Version> orderline;
+//	unordered_map<Integer, Item_Tuple> item;
+//	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
 	TPCC();
 
@@ -508,9 +436,9 @@ struct TPCC {
 //
 //	inline void Order_Import(ifstream&);
 //	/*-----------------------------------------------------------------------------------------------------------------------*/
-	void OrderLine_Insert(tup_4Int, OrderLine_Tuple);
-
-	inline void OrderLine_Import(ifstream&);
+//	void OrderLine_Insert(tup_4Int, OrderLine_Tuple);
+//
+//	inline void OrderLine_Import(ifstream&);
 //	/*-----------------------------------------------------------------------------------------------------------------------*/
 //	void Item_Insert(Integer, Item_Tuple&);
 //

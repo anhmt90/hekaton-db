@@ -12,6 +12,11 @@
 //#include <vector>
 
 vector<Table> tables;
+uint64_t GMI_cnt = 0;
+
+uint64_t getTimestamp(){
+	return GMI_cnt++;
+}
 /*----------------------------------------Supporting functions-----------------------------------------------------------*/
 void close_ifstream(ifstream& itbl) {
 	itbl.close();
@@ -39,7 +44,8 @@ extern "C" TPCC::TPCC(){
 TPCC::~TPCC() { }
 
 void TPCC::Warehouse_Insert(Integer w_id, Warehouse_Tuple &row) {
-	if(!warehouse.insert(make_pair(w_id, *(new Warehouse_Version(&row)))).second)
+//	if(!warehouse.insert(make_pair(w_id, *(new Warehouse_Version(&row)))).second)
+	if(!warehouse.insert(make_pair(w_id, row)).second)
 		throw ;
 }
 
@@ -60,7 +66,9 @@ void TPCC::Warehouse_Import(ifstream& itbl) {
 			row.w_zip = row.w_zip.castString(elm[6].c_str(), elm[6].length());
 			row.w_tax = row.w_tax.castString(elm[7].c_str(), elm[7].length());
 			row.w_ytd = row.w_ytd.castString(elm[8].c_str(), elm[8].length());
-			warehouse.insert(make_pair(row.w_id, *(new Warehouse_Version(&row))));
+
+			row.setEnd();
+			warehouse.insert(make_pair(row.w_id, row));
 		}
 		tables.back().attributes.push_back(Attribute("w_id","Integer","warehouse"));
 		tables.back().attributes.push_back(Attribute("w_name","Integer","warehouse"));
@@ -266,45 +274,45 @@ void TPCC::Warehouse_Import(ifstream& itbl) {
 //	}
 //}
 /*-----------------------------------------------------------------------------------------------------------------------*/
-void TPCC::OrderLine_Insert(tup_4Int tup, OrderLine_Tuple row) {
-	if(!orderline.insert(make_pair(tup, *(new OrderLine_Version(&row)))).second)
-		throw;
-
-}
-
-inline void TPCC::OrderLine_Import(ifstream& itbl) {
-	string line;
-	if (itbl.is_open()) {
-		while (getline(itbl, line)) {
-			vector<string> elm = split(line);
-			OrderLine_Tuple row;
-			row.ol_o_id = (new Integer)->castString(elm[0].c_str(), elm[0].length()).value;
-			row.ol_d_id = row.ol_d_id.castString(elm[1].c_str(), elm[1].length());
-			row.ol_w_id = row.ol_w_id.castString(elm[2].c_str(), elm[2].length());
-			row.ol_number = row.ol_number.castString(elm[3].c_str(), elm[3].length());
-			auto tup = make_tuple(row.ol_o_id, row.ol_d_id, row.ol_w_id, row.ol_number);
-
-			row.ol_i_id = row.ol_i_id.castString(elm[4].c_str(), elm[4].length());
-			row.ol_supply_w_id = row.ol_supply_w_id.castString(elm[5].c_str(), elm[5].length());
-			row.ol_delivery_d = row.ol_delivery_d.castString(elm[6].c_str(), elm[6].length());
-			row.ol_quantity = row.ol_quantity.castString(elm[7].c_str(), elm[7].length());
-			row.ol_amount = row.ol_amount.castString(elm[8].c_str(), elm[8].length());
-			row.ol_dist_info = row.ol_dist_info.castString(elm[9].c_str(), elm[9].length());
-
-			orderline.insert(make_pair(tup, *(new OrderLine_Version(&row))));
-		}
-		tables.back().attributes.push_back(Attribute("ol_o_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_d_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_w_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_number","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_i_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_supply_w_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_delivery_d","Timestamp","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_quantity","Numeric<2,0>","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_amount","Numeric<6,2>","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_dist_info","Char<24>","orderline"));
-	}
-}
+//void TPCC::OrderLine_Insert(tup_4Int tup, OrderLine_Tuple row) {
+//	if(!orderline.insert(make_pair(tup, *(new OrderLine_Version(&row)))).second)
+//		throw;
+//
+//}
+//
+//inline void TPCC::OrderLine_Import(ifstream& itbl) {
+//	string line;
+//	if (itbl.is_open()) {
+//		while (getline(itbl, line)) {
+//			vector<string> elm = split(line);
+//			OrderLine_Tuple row;
+//			row.ol_o_id = (new Integer)->castString(elm[0].c_str(), elm[0].length()).value;
+//			row.ol_d_id = row.ol_d_id.castString(elm[1].c_str(), elm[1].length());
+//			row.ol_w_id = row.ol_w_id.castString(elm[2].c_str(), elm[2].length());
+//			row.ol_number = row.ol_number.castString(elm[3].c_str(), elm[3].length());
+//			auto tup = make_tuple(row.ol_o_id, row.ol_d_id, row.ol_w_id, row.ol_number);
+//
+//			row.ol_i_id = row.ol_i_id.castString(elm[4].c_str(), elm[4].length());
+//			row.ol_supply_w_id = row.ol_supply_w_id.castString(elm[5].c_str(), elm[5].length());
+//			row.ol_delivery_d = row.ol_delivery_d.castString(elm[6].c_str(), elm[6].length());
+//			row.ol_quantity = row.ol_quantity.castString(elm[7].c_str(), elm[7].length());
+//			row.ol_amount = row.ol_amount.castString(elm[8].c_str(), elm[8].length());
+//			row.ol_dist_info = row.ol_dist_info.castString(elm[9].c_str(), elm[9].length());
+//
+//			orderline.insert(make_pair(tup, *(new OrderLine_Version(&row))));
+//		}
+//		tables.back().attributes.push_back(Attribute("ol_o_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_d_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_w_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_number","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_i_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_supply_w_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_delivery_d","Timestamp","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_quantity","Numeric<2,0>","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_amount","Numeric<6,2>","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_dist_info","Char<24>","orderline"));
+//	}
+//}
 ///*-----------------------------------------------------------------------------------------------------------------------*/
 //void TPCC::Item_Insert(Integer i_id, Item_Tuple& row) {
 //	if(item_ix.insert(make_pair(i_id, item.size())).second)
@@ -497,18 +505,18 @@ void TPCC::_import(){
 //		cout << "Order imported!\n";
 //	}
 //	/*----------------------------------------------------------------------*/
-	itbl.open("tbl/tpcc_orderline.tbl");
-	if (!itbl) {
-		// Print an error and exit
-		cerr << "tpcc_orderline.tbl could not be opened! :(" << endl;
-		exit(1);
-	} else {
-		tables.push_back(Table("orderline"));
-		OrderLine_Import(itbl);
-		close_ifstream(itbl);
-		tables.back().size = orderline.size();
-		cout << "OrderLine imported!\n";
-	}
+//	itbl.open("tbl/tpcc_orderline.tbl");
+//	if (!itbl) {
+//		// Print an error and exit
+//		cerr << "tpcc_orderline.tbl could not be opened! :(" << endl;
+//		exit(1);
+//	} else {
+//		tables.push_back(Table("orderline"));
+//		OrderLine_Import(itbl);
+//		close_ifstream(itbl);
+//		tables.back().size = orderline.size();
+//		cout << "OrderLine imported!\n";
+//	}
 //	/*----------------------------------------------------------------------*/
 //	itbl.open("tbl/tpcc_item.tbl");
 //	if (!itbl) {
