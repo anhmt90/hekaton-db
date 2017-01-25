@@ -13,6 +13,7 @@
 
 vector<Table> tables;
 uint64_t GMI_cnt = 0;
+const uint64_t INF = ~(1ull<<63);
 
 uint64_t getTimestamp(){
 	return GMI_cnt++;
@@ -67,7 +68,7 @@ void TPCC::Warehouse_Import(ifstream& itbl) {
 			row.w_tax = row.w_tax.castString(elm[7].c_str(), elm[7].length());
 			row.w_ytd = row.w_ytd.castString(elm[8].c_str(), elm[8].length());
 
-			row.setEnd();
+			row.setEnd(INF);
 			warehouse.insert(make_pair(row.w_id, row));
 		}
 		tables.back().attributes.push_back(Attribute("w_id","Integer","warehouse"));

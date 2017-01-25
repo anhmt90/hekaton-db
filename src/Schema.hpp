@@ -35,6 +35,9 @@ typedef tuple<Integer, Integer, Integer, Integer> tup_4Int;
 /*---------------------------------------------------------Global Variables/Function----------------------------------------------------------*/
 //Global, monotonically increasing counter
 extern uint64_t GMI_cnt;
+//Represent infinite timestamp
+extern const uint64_t INF;
+//get Timestampe from GMI_cnt and increase it by 1
 extern uint64_t getTimestamp();
 /*---------------------------------------------------------Supporting functions------------------------------------------------------*/
 
@@ -127,8 +130,8 @@ struct Version {
 		this->begin = getTimestamp();
 	}
 
-	void setEnd(){
-		this->end = getTimestamp();
+	void setEnd(uint64_t end){
+		this->end = end;
 	}
 };
 
