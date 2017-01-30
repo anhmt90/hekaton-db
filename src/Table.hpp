@@ -9,6 +9,7 @@
 
 #include "Attribute.hpp"
 #include "Types.hpp"
+
 //---------------------------------------------------------------------------
 /// A database table
 using namespace std;

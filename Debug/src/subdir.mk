@@ -7,6 +7,7 @@ CPP_SRCS += \
 ../src/Attribute.cpp \
 ../src/Schema.cpp \
 ../src/Table.cpp \
+../src/Transaction.cpp \
 ../src/Types.cpp \
 ../src/main.cpp 
 
@@ -14,6 +15,7 @@ OBJS += \
 ./src/Attribute.o \
 ./src/Schema.o \
 ./src/Table.o \
+./src/Transaction.o \
 ./src/Types.o \
 ./src/main.o 
 
@@ -21,6 +23,7 @@ CPP_DEPS += \
 ./src/Attribute.d \
 ./src/Schema.d \
 ./src/Table.d \
+./src/Transaction.d \
 ./src/Types.d \
 ./src/main.d 
 

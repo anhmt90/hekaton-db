@@ -32,6 +32,20 @@ typedef tuple<Integer, Integer> tup_2Int;
 typedef tuple<Integer, Integer, Integer> tup_3Int;
 typedef tuple<Integer, Integer, Integer, Integer> tup_4Int;
 
+
+//struct Key {
+//	Integer pk_int;
+//	tup_2Int pk_2int;
+//	tup_3Int pk_3int;
+//	tup_4Int pk_4int;
+//
+//	Key(Integer a){
+//		pk_int = a;
+//	}
+//
+//	Key
+//};
+
 /*---------------------------------------------------------Global Variables/Function----------------------------------------------------------*/
 //Global, monotonically increasing counter
 extern uint64_t GMI_cnt;
@@ -119,6 +133,11 @@ struct hash<tuple<Integer, Integer, Varchar<16>, Varchar<16>>> {
 //};
 
 /*--------------------------------Define structure of a row for each table-----------------------------------*/
+
+
+
+
+
 struct Version {
 	uint64_t begin;
 	uint64_t end;
@@ -126,13 +145,17 @@ struct Version {
 
 	bool isGarbage = false;
 
-	void setBegin(){
-		this->begin = getTimestamp();
+	void setBegin(uint64_t begin){
+		this->begin = begin;
 	}
 
 	void setEnd(uint64_t end){
 		this->end = end;
 	}
+
+//	Version(){ }
+//	Version(uint64_t begin) : begin(begin), end(INF){ }
+//	~Version();
 };
 
 
@@ -146,7 +169,7 @@ struct Warehouse_Tuple : public Version{
 	Numeric<12, 2> w_ytd;
 
 	Warehouse_Tuple(){
-		setBegin();
+		setBegin(getTimestamp());
 	}
 
 	Warehouse_Tuple(
@@ -310,7 +333,7 @@ struct Order_Tuple {
 	}
 };
 
-struct OrderLine_Tuple {
+struct OrderLine_Tuple : public Version {
 	Integer ol_o_id, ol_d_id, ol_w_id, ol_number; //Pkey
 	Integer ol_i_id, ol_supply_w_id;
 	Timestamp ol_delivery_d;
@@ -339,7 +362,7 @@ struct OrderLine_Tuple {
 	}
 };
 
-struct Item_Tuple {
+struct Item_Tuple : public Version {
 	//uno_Tupleed_map<Integer, Integer> i_id;
 	Integer i_id;	//Pkey
 	Integer i_im_id;
@@ -395,14 +418,15 @@ struct Stock_Tuple {
 
 extern vector<Table> tables;
 
-struct TPCC {
-
-	/*
-	 * Primary key indexes of each table as unordered_map
-	 * with key part is the primary key and value part is
-	 * index-number on the vector of the table.
-	 */
-	unordered_map<Integer, Warehouse_Tuple> warehouse;
+typedef unordered_multimap<Integer, Warehouse_Tuple> Warehouse;
+typedef unordered_multimap<tup_4Int, OrderLine_Tuple> OrderLine;
+/*
+ * Primary key indexes of each table as unordered_map
+ * with key part is the primary key and value part is
+ * index-number on the vector of the table.
+ */
+extern Warehouse warehouse;
+extern OrderLine orderline;
 //	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
 //	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
 //	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
@@ -411,13 +435,29 @@ struct TPCC {
 //	unordered_map<Integer, Item_Tuple> item;
 //	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
+struct Warehouse_Table : public Table{
+	void insert(Warehouse_Tuple);
+};
+
+struct OrderLine_Table : public Table{
+
+};
+
+
+void _import();
+inline void Warehouse_Import(ifstream& );
+
+inline void OrderLine_Import(ifstream&);
+
+struct TPCC {
+
 	TPCC();
 
 	~TPCC();
 
-	void Warehouse_Insert(Integer , Warehouse_Tuple &);
+//	void Warehouse_Insert(Integer , Warehouse_Tuple &);
 
-	void Warehouse_Import(ifstream& );
+//	void Warehouse_Import(ifstream& );
 //	/*-----------------------------------------------------------------------------------------------------------------------*/
 //	void District_Insert(tup_2Int, District_Tuple&);
 //
@@ -456,7 +496,7 @@ struct TPCC {
 	//For the two indexes
 
 //	void _importIndex();
-	void _import();
+//	void _import();
 
 
 };

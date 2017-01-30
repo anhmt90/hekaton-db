@@ -10,14 +10,42 @@
 
 #include <climits>	//for CHAR_BIT
 #include <set>
+#include <cstdint>
+
+#include "Schema.hpp"
 
 using namespace std;
 
+struct Transaction;
+
+const uint64_t NOT_SET = 1ull<<63;
+
 extern uint64_t GMI_tid;
+extern unordered_map<uint64_t,Transaction*> TransactionManager;
+
+
+
+class TransactionNotFoundException : public exception {
+public:
+	TransactionNotFoundException(){}
+};
+
+struct Predicate {
+	Integer pk_int;
+	tup_2Int pk_2int;
+	tup_3Int pk_3int;
+	tup_4Int pk_4int;
+};
 
 struct Transaction{
+	// Transaction ID
 	const uint64_t Tid;
+	// begin time of the transaction, also used as logical read time
 	uint64_t begin;
+	/*
+	 *  end time of the transaction, will be set as INF in the constructor,
+	 *  will be set by getTimestamp() again when the transaction precommits.
+	 */
 	uint64_t end;
 
 	/*
@@ -35,7 +63,15 @@ struct Transaction{
 	/*
 	 * stores Tid of the transactions that depend on this transaction
 	 */
-	set<uint64_t> CommitDepSet;
+	unordered_map<uint64_t, Transaction*> CommitDepSet;
+
+	/*
+	 *
+	 */
+	vector<Version*> ReadSet;
+	vector<pair<Warehouse*,Integer>> ScanSet_Warehouse;
+	vector<pair<OrderLine*,tup_4Int>> ScanSet_OrderLine;
+	vector<Version*> WriteSet;
 
 	/* each transaction can be in 1 of 4 states */
 	enum class State : unsigned {Active, Preparing, Committed, Arborted};
@@ -56,6 +92,13 @@ struct Transaction{
 	}
 
 	void execute();
+
+	void lookup(string, Predicate);
+
+	void commit();
+
+	void arbort();
+
 };
 
 

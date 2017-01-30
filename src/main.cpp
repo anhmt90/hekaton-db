@@ -22,8 +22,9 @@
 //extern uint64_t GMI_cnt = 0;
 
 int main(int argc, char* argv[]) {
-	TPCC* tpcc = new TPCC();
-	for(auto &w : tpcc->warehouse){
+//	TPCC* tpcc = new TPCC();
+	_import();
+	for(auto &w : warehouse){
 		cout << w.second.begin << " " << w.second.end << " | " << w.second.w_id <<"\t" << w.second.w_street_1 << "\n";
 	}
 
