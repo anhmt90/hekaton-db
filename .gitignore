@@ -1,2 +1,6 @@
 tbl/
+Debug/
+.settings/
+.cproject
+.project
 

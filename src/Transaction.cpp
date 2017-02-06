@@ -366,14 +366,16 @@ void Transaction::commit(){
 	/*
 	 * write log records here
 	 */
-
-	this->state = State::Committed;
+	if(this->state == State::Preparing)
+		this->state = State::Committed;
 }
 
 
 void Transaction::precommit(){
-	this->state = State::Preparing;
-	this->end = getTimestamp();
+	if(this->state == State::Active){
+		this->state = State::Preparing;
+		this->end = getTimestamp();
+	}
 }
 
 /****************************************************************************/
@@ -458,7 +460,7 @@ void Transaction::execute(){
 	/*
 	 * VALIDATION
 	 */
-	if(validate()){
+	if(validate() && this->state != State::Aborted){
 		while(!this->AbortNow && CommitDepCounter!=0){
 			//usleep(200000);
 		}
