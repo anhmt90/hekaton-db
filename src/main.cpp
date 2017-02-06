@@ -17,17 +17,24 @@
 
 
 #include "Schema.hpp"
+#include "Transaction.hpp"
+
+//Warehouse_Table warehouse;
+//OrderLine_Table orderline;
+
 
 //Global, monotonically increasing counter
 //extern uint64_t GMI_cnt = 0;
 
 int main(int argc, char* argv[]) {
 //	TPCC* tpcc = new TPCC();
-	_import();
-	for(auto &w : warehouse){
+	warehouse = *(new Warehouse_Table("warehouse"));
+	for(auto &w : warehouse.pk_index){
 		cout << w.second.begin << " " << w.second.end << " | " << w.second.w_id <<"\t" << w.second.w_street_1 << "\n";
 	}
 
+	Transaction* T = new Transaction();
+//	orderline = *(new OrderLine_Table("orderline"));
 }
 
 

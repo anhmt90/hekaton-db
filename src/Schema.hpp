@@ -145,6 +145,8 @@ struct Version {
 
 	bool isGarbage = false;
 
+	virtual void vf(){ };
+
 	void setBegin(uint64_t begin){
 		this->begin = begin;
 	}
@@ -152,6 +154,8 @@ struct Version {
 	void setEnd(uint64_t end){
 		this->end = end;
 	}
+
+
 
 //	Version(){ }
 //	Version(uint64_t begin) : begin(begin), end(INF){ }
@@ -168,8 +172,8 @@ struct Warehouse_Tuple : public Version{
 	Numeric<4, 4> w_tax;
 	Numeric<12, 2> w_ytd;
 
-	Warehouse_Tuple(){
-		setBegin(getTimestamp());
+	Warehouse_Tuple(uint64_t begin){
+		this->begin = begin;
 	}
 
 	Warehouse_Tuple(
@@ -416,17 +420,16 @@ struct Stock_Tuple {
 };
 /*-----------------------------------------------------------------------------------------------------------------------*/
 
-extern vector<Table> tables;
 
-typedef unordered_multimap<Integer, Warehouse_Tuple> Warehouse;
-typedef unordered_multimap<tup_4Int, OrderLine_Tuple> OrderLine;
+typedef unordered_multimap<Integer, Warehouse_Tuple> Warehouse_PK;
+typedef unordered_multimap<tup_4Int, OrderLine_Tuple> OrderLine_PK;
 /*
  * Primary key indexes of each table as unordered_map
  * with key part is the primary key and value part is
  * index-number on the vector of the table.
  */
-extern Warehouse warehouse;
-extern OrderLine orderline;
+//extern Warehouse warehouse;
+//extern OrderLine orderline;
 //	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
 //	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
 //	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
@@ -436,18 +439,44 @@ extern OrderLine orderline;
 //	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
 struct Warehouse_Table : public Table{
-	void insert(Warehouse_Tuple);
+	Warehouse_PK pk_index;
+
+	Warehouse_Table(){};
+	Warehouse_Table(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~Warehouse_Table(){};
+
+	void import();
+
+	Warehouse_Tuple* insert(Warehouse_Tuple);
 };
 
 struct OrderLine_Table : public Table{
+	OrderLine_PK pk_index;
 
+	OrderLine_Table(){};
+	OrderLine_Table(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~OrderLine_Table(){};
+
+	void import();
+
+	void insert(OrderLine_Tuple);
 };
 
+extern Warehouse_Table warehouse;
+extern OrderLine_Table orderline;
 
 void _import();
-inline void Warehouse_Import(ifstream& );
-
-inline void OrderLine_Import(ifstream&);
+//inline void Warehouse_Import(ifstream& );
+//
+//inline void OrderLine_Import(ifstream&);
 
 struct TPCC {
 

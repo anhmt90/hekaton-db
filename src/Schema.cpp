@@ -11,8 +11,6 @@
 //#include <utility>
 //#include <vector>
 
-Warehouse warehouse;
-OrderLine orderline;
 //unordered_map<Integer, Warehouse_Tuple> warehouse;
 //	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
 //	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
@@ -22,7 +20,12 @@ OrderLine orderline;
 //	unordered_map<Integer, Item_Tuple> item;
 //	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
-vector<Table> tables;
+
+Warehouse_Table warehouse;
+OrderLine_Table orderline;
+
+
+
 uint64_t GMI_cnt = 0;
 const uint64_t INF = ~(1ull<<63);
 
@@ -61,38 +64,38 @@ TPCC::~TPCC() { }
 //		throw ;
 //}
 
-void Warehouse_Import(ifstream& itbl) {
-	string line;
-	if (itbl.is_open()) {
-		while (getline(itbl, line)) {
-			vector<string> elm = split(line);
-			Warehouse_Tuple row;
-			row.w_id = Integer::castString(elm[0].c_str(), elm[0].length());
-			string anh = to_string(1);
-
-			row.w_name = row.w_name.castString(elm[1].c_str(), elm[1].length());
-			row.w_street_1 = row.w_street_1.castString(elm[2].c_str(), elm[2].length());
-			row.w_street_2 = row.w_street_2.castString(elm[3].c_str(), elm[3].length());
-			row.w_city = row.w_city.castString(elm[4].c_str(), elm[4].length());
-			row.w_state = row.w_state.castString(elm[5].c_str(), elm[5].length());
-			row.w_zip = row.w_zip.castString(elm[6].c_str(), elm[6].length());
-			row.w_tax = row.w_tax.castString(elm[7].c_str(), elm[7].length());
-			row.w_ytd = row.w_ytd.castString(elm[8].c_str(), elm[8].length());
-
-			row.setEnd(INF);
-			warehouse.insert(make_pair(row.w_id, row));
-		}
-		tables.back().attributes.push_back(Attribute("w_id","Integer","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_name","Integer","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_street_1","Varchar<20>","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_street_2","Varchar<20>","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_city","Varchar<20>","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_state","Char<2>","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_zip","Char<9>","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_tax","Numeric<4,4>","warehouse"));
-		tables.back().attributes.push_back(Attribute("w_ytd","Numeric<12,2>","warehouse"));
-	}
-}
+//void Warehouse_Import(ifstream& itbl) {
+//	string line;
+//	if (itbl.is_open()) {
+//		while (getline(itbl, line)) {
+//			vector<string> elm = split(line);
+//			Warehouse_Tuple row;
+//			row.w_id = Integer::castString(elm[0].c_str(), elm[0].length());
+//			string anh = to_string(1);
+//
+//			row.w_name = row.w_name.castString(elm[1].c_str(), elm[1].length());
+//			row.w_street_1 = row.w_street_1.castString(elm[2].c_str(), elm[2].length());
+//			row.w_street_2 = row.w_street_2.castString(elm[3].c_str(), elm[3].length());
+//			row.w_city = row.w_city.castString(elm[4].c_str(), elm[4].length());
+//			row.w_state = row.w_state.castString(elm[5].c_str(), elm[5].length());
+//			row.w_zip = row.w_zip.castString(elm[6].c_str(), elm[6].length());
+//			row.w_tax = row.w_tax.castString(elm[7].c_str(), elm[7].length());
+//			row.w_ytd = row.w_ytd.castString(elm[8].c_str(), elm[8].length());
+//
+//			row.setEnd(INF);
+//			warehouse.insert(make_pair(row.w_id, row));
+//		}
+//		tables.back().attributes.push_back(Attribute("w_id","Integer","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_name","Integer","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_street_1","Varchar<20>","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_street_2","Varchar<20>","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_city","Varchar<20>","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_state","Char<2>","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_zip","Char<9>","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_tax","Numeric<4,4>","warehouse"));
+//		tables.back().attributes.push_back(Attribute("w_ytd","Numeric<12,2>","warehouse"));
+//	}
+//}
 /*-----------------------------------------------------------------------------------------------------------------------*/
 //void TPCC::District_Insert(tup_2Int tup, District_Tuple &row) {
 //	if(district_ix.insert(make_pair(tup, district.size())).second)
@@ -292,39 +295,39 @@ void Warehouse_Import(ifstream& itbl) {
 //
 //}
 //
-inline void OrderLine_Import(ifstream& itbl) {
-	string line;
-	if (itbl.is_open()) {
-		while (getline(itbl, line)) {
-			vector<string> elm = split(line);
-			OrderLine_Tuple row;
-			row.ol_o_id = row.ol_o_id.castString(elm[0].c_str(), elm[0].length()).value;
-			row.ol_d_id = row.ol_d_id.castString(elm[1].c_str(), elm[1].length());
-			row.ol_w_id = row.ol_w_id.castString(elm[2].c_str(), elm[2].length());
-			row.ol_number = row.ol_number.castString(elm[3].c_str(), elm[3].length());
-			auto tup = make_tuple(row.ol_o_id, row.ol_d_id, row.ol_w_id, row.ol_number);
-
-			row.ol_i_id = row.ol_i_id.castString(elm[4].c_str(), elm[4].length());
-			row.ol_supply_w_id = row.ol_supply_w_id.castString(elm[5].c_str(), elm[5].length());
-			row.ol_delivery_d = row.ol_delivery_d.castString(elm[6].c_str(), elm[6].length());
-			row.ol_quantity = row.ol_quantity.castString(elm[7].c_str(), elm[7].length());
-			row.ol_amount = row.ol_amount.castString(elm[8].c_str(), elm[8].length());
-			row.ol_dist_info = row.ol_dist_info.castString(elm[9].c_str(), elm[9].length());
-
-			orderline.insert(make_pair(tup, row));
-		}
-		tables.back().attributes.push_back(Attribute("ol_o_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_d_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_w_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_number","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_i_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_supply_w_id","Integer","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_delivery_d","Timestamp","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_quantity","Numeric<2,0>","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_amount","Numeric<6,2>","orderline"));
-		tables.back().attributes.push_back(Attribute("ol_dist_info","Char<24>","orderline"));
-	}
-}
+//inline void OrderLine_Import(ifstream& itbl) {
+//	string line;
+//	if (itbl.is_open()) {
+//		while (getline(itbl, line)) {
+//			vector<string> elm = split(line);
+//			OrderLine_Tuple row;
+//			row.ol_o_id = row.ol_o_id.castString(elm[0].c_str(), elm[0].length()).value;
+//			row.ol_d_id = row.ol_d_id.castString(elm[1].c_str(), elm[1].length());
+//			row.ol_w_id = row.ol_w_id.castString(elm[2].c_str(), elm[2].length());
+//			row.ol_number = row.ol_number.castString(elm[3].c_str(), elm[3].length());
+//			auto tup = make_tuple(row.ol_o_id, row.ol_d_id, row.ol_w_id, row.ol_number);
+//
+//			row.ol_i_id = row.ol_i_id.castString(elm[4].c_str(), elm[4].length());
+//			row.ol_supply_w_id = row.ol_supply_w_id.castString(elm[5].c_str(), elm[5].length());
+//			row.ol_delivery_d = row.ol_delivery_d.castString(elm[6].c_str(), elm[6].length());
+//			row.ol_quantity = row.ol_quantity.castString(elm[7].c_str(), elm[7].length());
+//			row.ol_amount = row.ol_amount.castString(elm[8].c_str(), elm[8].length());
+//			row.ol_dist_info = row.ol_dist_info.castString(elm[9].c_str(), elm[9].length());
+//
+//			pk_index.insert(make_pair(tup, row));
+//		}
+//		tables.back().attributes.push_back(Attribute("ol_o_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_d_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_w_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_number","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_i_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_supply_w_id","Integer","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_delivery_d","Timestamp","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_quantity","Numeric<2,0>","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_amount","Numeric<6,2>","orderline"));
+//		tables.back().attributes.push_back(Attribute("ol_dist_info","Char<24>","orderline"));
+//	}
+//}
 ///*-----------------------------------------------------------------------------------------------------------------------*/
 //void TPCC::Item_Insert(Integer i_id, Item_Tuple& row) {
 //	if(item_ix.insert(make_pair(i_id, item.size())).second)
@@ -434,8 +437,7 @@ inline void OrderLine_Import(ifstream& itbl) {
 //}
 
 
-void _import(){
-	//import tables
+void Warehouse_Table::import(){
 	ifstream itbl("tbl/tpcc_warehouse.tbl");
 
 	if (!itbl) {
@@ -444,12 +446,112 @@ void _import(){
 		exit(1);
 
 	} else {
-		tables.push_back(Table("warehouse"));
-		Warehouse_Import(itbl);
-		tables.back().size = warehouse.size();
+		string line;
+		if (itbl.is_open()) {
+			while (getline(itbl, line)) {
+				vector<string> elm = split(line);
+				Warehouse_Tuple row = *(new Warehouse_Tuple(getTimestamp()));
+				row.w_id = Integer::castString(elm[0].c_str(), elm[0].length());
+				string anh = to_string(1);
+
+				row.w_name = row.w_name.castString(elm[1].c_str(), elm[1].length());
+				row.w_street_1 = row.w_street_1.castString(elm[2].c_str(), elm[2].length());
+				row.w_street_2 = row.w_street_2.castString(elm[3].c_str(), elm[3].length());
+				row.w_city = row.w_city.castString(elm[4].c_str(), elm[4].length());
+				row.w_state = row.w_state.castString(elm[5].c_str(), elm[5].length());
+				row.w_zip = row.w_zip.castString(elm[6].c_str(), elm[6].length());
+				row.w_tax = row.w_tax.castString(elm[7].c_str(), elm[7].length());
+				row.w_ytd = row.w_ytd.castString(elm[8].c_str(), elm[8].length());
+
+				row.setEnd(INF);
+				pk_index.insert(make_pair(row.w_id, row));
+			}
+			tables.back().attributes.push_back(Attribute("w_id","Integer","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_name","Integer","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_street_1","Varchar<20>","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_street_2","Varchar<20>","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_city","Varchar<20>","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_state","Char<2>","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_zip","Char<9>","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_tax","Numeric<4,4>","warehouse"));
+			tables.back().attributes.push_back(Attribute("w_ytd","Numeric<12,2>","warehouse"));
+		}
 		close_ifstream(itbl);
+		tables.back().size = pk_index.size();
 		cout << "Warehouse imported!\n";
 	}
+}
+
+//template<typename Tup, typename... Args > inline pair<Tup*, bool> insert(Tup t, Args... a){
+//	pk_index.i
+//}
+
+
+Warehouse_Tuple* Warehouse_Table::insert(Warehouse_Tuple t ){
+	auto i = pk_index.insert(make_pair(t.w_id, t));
+	++this->size;
+	return &(i->second);
+}
+
+void OrderLine_Table::import(){
+	ifstream itbl("tbl/tpcc_orderline.tbl");
+	if (!itbl) {
+		// Print an error and exit
+		cerr << "tpcc_orderline.tbl could not be opened! :(" << endl;
+		exit(1);
+	} else {
+		string line;
+		if (itbl.is_open()) {
+			while (getline(itbl, line)) {
+				vector<string> elm = split(line);
+				OrderLine_Tuple row;
+				row.ol_o_id = row.ol_o_id.castString(elm[0].c_str(), elm[0].length()).value;
+				row.ol_d_id = row.ol_d_id.castString(elm[1].c_str(), elm[1].length());
+				row.ol_w_id = row.ol_w_id.castString(elm[2].c_str(), elm[2].length());
+				row.ol_number = row.ol_number.castString(elm[3].c_str(), elm[3].length());
+				auto tup = make_tuple(row.ol_o_id, row.ol_d_id, row.ol_w_id, row.ol_number);
+
+				row.ol_i_id = row.ol_i_id.castString(elm[4].c_str(), elm[4].length());
+				row.ol_supply_w_id = row.ol_supply_w_id.castString(elm[5].c_str(), elm[5].length());
+				row.ol_delivery_d = row.ol_delivery_d.castString(elm[6].c_str(), elm[6].length());
+				row.ol_quantity = row.ol_quantity.castString(elm[7].c_str(), elm[7].length());
+				row.ol_amount = row.ol_amount.castString(elm[8].c_str(), elm[8].length());
+				row.ol_dist_info = row.ol_dist_info.castString(elm[9].c_str(), elm[9].length());
+
+				pk_index.insert(make_pair(tup, row));
+			}
+			tables.back().attributes.push_back(Attribute("ol_o_id","Integer","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_d_id","Integer","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_w_id","Integer","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_number","Integer","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_i_id","Integer","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_supply_w_id","Integer","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_delivery_d","Timestamp","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_quantity","Numeric<2,0>","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_amount","Numeric<6,2>","orderline"));
+			tables.back().attributes.push_back(Attribute("ol_dist_info","Char<24>","orderline"));
+		}
+		close_ifstream(itbl);
+		tables.back().size = pk_index.size();
+		cout << "OrderLine imported!\n";
+	}
+}
+
+void _import(){
+	//import tables
+//	ifstream itbl("tbl/tpcc_warehouse.tbl");
+//
+//	if (!itbl) {
+//		// Print an error and exit
+//		cerr << "tpcc_warehouse.tbl could not be opened! :(" << endl;
+//		exit(1);
+//
+//	} else {
+//		Warehouse_Import(itbl);
+//		tables.back().size = warehouse.size();
+//		close_ifstream(itbl);
+//		cout << "Warehouse imported!\n";
+//	}
 
 	/*----------------------------------------------------------------------*/
 //	itbl.open("tbl/tpcc_district.tbl");
@@ -517,18 +619,17 @@ void _import(){
 //		cout << "Order imported!\n";
 //	}
 //	/*----------------------------------------------------------------------*/
-	itbl.open("tbl/tpcc_orderline.tbl");
-	if (!itbl) {
-		// Print an error and exit
-		cerr << "tpcc_orderline.tbl could not be opened! :(" << endl;
-		exit(1);
-	} else {
-		tables.push_back(Table("orderline"));
-		OrderLine_Import(itbl);
-		close_ifstream(itbl);
-		tables.back().size = orderline.size();
-		cout << "OrderLine imported!\n";
-	}
+//	itbl.open("tbl/tpcc_orderline.tbl");
+//	if (!itbl) {
+//		// Print an error and exit
+//		cerr << "tpcc_orderline.tbl could not be opened! :(" << endl;
+//		exit(1);
+//	} else {
+//		OrderLine_Import(itbl);
+//		close_ifstream(itbl);
+//		tables.back().size = orderline.size();
+//		cout << "OrderLine imported!\n";
+//	}
 //	/*----------------------------------------------------------------------*/
 //	itbl.open("tbl/tpcc_item.tbl");
 //	if (!itbl) {

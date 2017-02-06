@@ -15,27 +15,57 @@
 #include "Schema.hpp"
 
 using namespace std;
-
+/****************************************************************************/
 struct Transaction;
 
+// value to present a null value of a field
 const uint64_t NOT_SET = 1ull<<63;
 
+// counter to generate the Transactions ID
 extern uint64_t GMI_tid;
+
+// container to manage all running Transactions
 extern unordered_map<uint64_t,Transaction*> TransactionManager;
 
+// vector to store terminated Transactions
+extern vector<Transaction*> GarbageTransactions;
 
+/****************************************************************************/
 
 class TransactionNotFoundException : public exception {
 public:
 	TransactionNotFoundException(){}
 };
 
+
+
 struct Predicate {
 	Integer pk_int;
 	tup_2Int pk_2int;
 	tup_3Int pk_3int;
 	tup_4Int pk_4int;
+
+	Predicate(Integer pk_int) : pk_int(pk_int){
+
+	}
+
+	Predicate(tup_2Int pk_2int) : pk_2int(pk_2int){
+
+	}
+
+	Predicate(tup_3Int pk_3int) : pk_3int(pk_3int){
+
+	}
+
+	Predicate(tup_4Int pk_4int) : pk_4int(pk_4int){
+
+	}
+
+	~Predicate(){ };
 };
+
+
+
 
 struct Transaction{
 	// Transaction ID
@@ -63,41 +93,58 @@ struct Transaction{
 	/*
 	 * stores Tid of the transactions that depend on this transaction
 	 */
-	unordered_map<uint64_t, Transaction*> CommitDepSet;
+	vector<uint64_t> CommitDepSet;
 
 	/*
 	 *
 	 */
 	vector<Version*> ReadSet;
-	vector<pair<Warehouse*,Integer>> ScanSet_Warehouse;
-	vector<pair<OrderLine*,tup_4Int>> ScanSet_OrderLine;
-	vector<Version*> WriteSet;
+
+	vector<pair<Warehouse_PK*,Integer>> ScanSet_Warehouse;
+	vector<pair<OrderLine_PK*,tup_4Int>> ScanSet_OrderLine;
+
+//	template<typename Functor>
+//	void rescan(Functor &f) {
+//	  f(ScanSet_Warehouse);
+//	  f(ScanSet_OrderLine);
+//	}
+	/*
+	 * first: old version
+	 * second: new version
+	 * if second  = nullptr, then it is a delete
+	 */
+	vector<pair<Version*, Version*>> WriteSet;
+
+
+
 
 	/* each transaction can be in 1 of 4 states */
-	enum class State : unsigned {Active, Preparing, Committed, Arborted};
+	enum class State : unsigned {Active, Preparing, Committed, Aborted};
 	State state;
 
 	Transaction():Tid(GMI_tid++),begin(getTimestamp()), end(1ull<<63), state(State::Active){
-
+		execute();
 	}
 
+	~Transaction(){ };
 
-	void setState(State state){
-		this->state = state;
-	}
-
-	void decreaseCommitDepCounter(){
-		//i ? ++CommitDepCounter:--CommitDepCounter;
-		--CommitDepCounter;
-	}
+//	void setState(State state){
+//		this->state = state;
+//	}
+	void decreaseCommitDepCounter();
 
 	void execute();
 
-	void lookup(string, Predicate);
+	Version* read(string, Predicate);
 
+	Version* update(string, Predicate);
+
+	void precommit();
+	void abort();
 	void commit();
 
-	void arbort();
+	bool validate();
+
 
 };
 

@@ -6,15 +6,25 @@
  */
 
 #include "Transaction.hpp"
+#include <unistd.h>
 
 using namespace std;
 
 void newOrderRandom(Timestamp);
 
+/****************************************************************************/
 uint64_t GMI_tid = (1ull<<63) + 1;
 
 unordered_map<uint64_t,Transaction*> TransactionManager;
 
+vector<Transaction*> GarbageTransactions;
+
+/****************************************************************************/
+void Transaction::decreaseCommitDepCounter(){
+	//i ? ++CommitDepCounter:--CommitDepCounter;
+	--CommitDepCounter;
+}
+/****************************************************************************/
 /*
  * @return:
  * 			1 : V is visible to T, just read V
@@ -51,6 +61,7 @@ int checkVisibility(Version& V, Transaction* T){
 
 			if(TB->state == Transaction::State::Active && TS == NOT_SET){
 				if(TB->Tid == T->Tid && V.end == INF)
+				// for updating a version several time within a transaction
 				// just read V
 					return 1;
 				else
@@ -61,7 +72,7 @@ int checkVisibility(Version& V, Transaction* T){
 				if(V.begin < TS && V.end == INF){
 					//SPECULATIVELY read V
 					++(T->CommitDepCounter);
-					TB->CommitDepSet.insert(make_pair(T->Tid, T));
+					TB->CommitDepSet.push_back(T->Tid);
 					// just read V
 					return 1;
 				}
@@ -78,7 +89,7 @@ int checkVisibility(Version& V, Transaction* T){
 					return 0;
 			}
 
-			else if(TB->state == Transaction::State::Arborted){
+			else if(TB->state == Transaction::State::Aborted){
 				// ignore V; it's a garbage version
 				// here, we can let the garbage collector point to V
 				return 0;
@@ -121,7 +132,7 @@ int checkVisibility(Version& V, Transaction* T){
 					// if TE aborts, V will be visible
 					// SPECULATIVELY ignore V
 					++(T->CommitDepCounter);
-					TE->CommitDepSet.insert(make_pair(T->Tid, T));
+					TE->CommitDepSet.push_back(T->Tid);
 					// just ignore  V
 					return 0;
 				}
@@ -132,7 +143,7 @@ int checkVisibility(Version& V, Transaction* T){
 					return 1;
 				}
 			}
-			else if(TE->state == Transaction::State::Arborted){
+			else if(TE->state == Transaction::State::Aborted){
 				// just read V
 				return 1;
 			}
@@ -150,77 +161,97 @@ int checkVisibility(Version& V, Transaction* T){
 
 }
 
-bool checkUpdatibility(Version& V, Transaction* T){
+/****************************************************************************/
+int checkUpdatibility(Version& V, Transaction* T){
 	// V.end is a timestamp
 	if((V.end & 1ull<<63) == 0) {
 		if(V.end == INF)
-			return true;
+			return 1;
 		else
-			return false;
+			return 0;
 	}
 	// V.end contains a Tid
 	else {
 		try{
 			auto TE = TransactionManager.at(V.end);
-			if(TE->state == Transaction::State::Arborted)
-				return true;
+			if(TE->state == Transaction::State::Aborted)
+				return 1;
+//			else if (TE->state == Transaction::State::Preparing && TE->end != NOT_SET){
+//				/*
+//				 * SPECULATIVE UPDATE
+//				 * that is an uncommitted version can be updated
+//				 * but the transaction that created it must have completed normal processing.
+//				 *
+//				 * When transaction T reaches the end of normal processing, it precommits and
+//				 * begins its preparation phase. Precommit simply consists of acquiring the
+//				 * transaction’s end timestamp and setting the transaction state to Preparing.
+//				 *
+//				 */
+//				return 1;
+//			}
 			else
-				return false;
+				return 0;
 		} catch (out_of_range& oor){
 			/*
 			 * TE is terminated or not found
 			 */
-			return true;
+			return -1;
 		}
 	}
 }
 
-void Transaction::lookup(string tableName, Predicate pred){
-//	pair<Warehouse::iterator, Warehouse::iterator> range;
+/****************************************************************************/
+Version* Transaction::read(string tableName, Predicate pred){
 	if(tableName == "warehouse"){
 		auto pkey = pred.pk_int;
 		//register the scan into ScanSet
-		ScanSet_Warehouse.push_back(make_pair(&warehouse, pkey));
-		auto range = warehouse.equal_range(pred.pk_int);
+		ScanSet_Warehouse.push_back(make_pair(&warehouse.pk_index, pkey));
+		auto range = warehouse.pk_index.equal_range(pred.pk_int);
 
 		//start the scan
 		for(auto it = range.first; it != range.second; ++it){
-				// the scanned version
-				auto V = it->second;
-				//check predicate
-				if(V.w_id != pkey)
-					continue;
-				else {
-					int res = checkVisibility(V, this);
-					while(res == -1){
-						res = checkVisibility(V, this);
-					}
-					if(res == 1)
-						this->ReadSet.push_back(&V);
-					else
-						continue;
+			// the scanned version
+//			Warehouse_Tuple V = new Warehouse_Tuple(this->Tid);
+			Warehouse_Tuple* V = &(it->second);
+			//check predicate
+			if(V->w_id != pkey)
+				continue;
+			else {
+				int res = checkVisibility(*V, this);
+				while(res == -1){
+					res = checkVisibility(*V, this);
 				}
-
-
+				if(res == 1){
+					// adding V to ReadSet
+					this->ReadSet.push_back(V);
+					return V;
+				}
+				else
+					continue;
+			}
 		}
 	}
 	else if(tableName == "orderline"){
 		auto pkey = pred.pk_4int;
-		ScanSet_OrderLine.push_back(make_pair(&orderline, pkey));
-		auto range = orderline.equal_range(pred.pk_4int);
+		ScanSet_OrderLine.push_back(make_pair(&orderline.pk_index, pkey));
+		auto range = orderline.pk_index.equal_range(pred.pk_4int);
+
 		for(auto it = range.first; it != range.second; ++it){
 			// the scanned version
-			auto V = it->second;
+			OrderLine_Tuple* V = &(it->second);
 			//check predicate
-			if(make_tuple(V.ol_o_id, V.ol_d_id, V.ol_w_id, V.ol_number) != pkey)
+			if(make_tuple(V->ol_o_id, V->ol_d_id, V->ol_w_id, V->ol_number) != pkey)
 				continue;
 			else {
-				int res = checkVisibility(V, this);
+				int res = checkVisibility(*V, this);
 				while(res == -1){
-					res = checkVisibility(V, this);
+					res = checkVisibility(*V, this);
 				}
-				if(res == 1)
-					this->ReadSet.push_back(&V);
+				if(res == 1){
+					// adding V to ReadSet
+					this->ReadSet.push_back(V);
+					return V;
+				}
 				else
 					continue;
 			}
@@ -228,11 +259,124 @@ void Transaction::lookup(string tableName, Predicate pred){
 
 		}
 	}
+	return nullptr;
 }
 
-//void Transaction::insert(string tableName, Predicate pred){
-//
-//}
+/****************************************************************************/
+/*
+ * update district
+ * set d_next_o_id=o_id+1
+ * where d_w_id=w_id and district.d_id=d_id;
+ */
+Version* Transaction::update(string tableName, Predicate pred){
+	Version* V = read(tableName, pred);
+	if(V){
+		auto updatable = checkUpdatibility(*V, this);
+
+		while(updatable == -1)
+			updatable = checkUpdatibility(*V, this); // recheck
+
+		if(updatable == 0)
+			return nullptr;
+
+		// V can be updated
+		else if (updatable == 1){
+			if( (V->end & 1ull<<63) == 0){
+				V->end = this->Tid;		// set V's End field to Tid
+			}
+			else
+				// T must abort if there is another Transaction has sneaked into V
+				return nullptr;
+
+			// create a new version
+			if(tableName == "warehouse"){
+				Warehouse_Tuple* VN = new Warehouse_Tuple(NOT_SET);
+				*VN = *(dynamic_cast<Warehouse_Tuple*>(V));
+
+//				*VN = *V;
+				VN->begin = this->Tid;
+				VN->end = INF;
+
+//				Warehouse_Tuple* VN = dynamic_cast<Warehouse_Tuple*>(V);
+
+				this->WriteSet.push_back(make_pair(V,VN));
+				return VN;
+//				if(VN){
+//					vn->
+//					Warehouse_Tuple* i = Warehouse_Table::insert(*vn);
+//					return VN;
+//				}
+
+			} else if (tableName == "orderline"){
+
+			}
+
+		}
+	}
+	return V;
+
+}
+
+/****************************************************************************/
+bool Transaction::validate(){
+	/*
+	 * Validation consists of two steps: checking visibility of the
+	 * versions read and checking for phantoms.
+	 */
+
+	/*
+	 * To check visibility transaction T scans its ReadSet and for
+	 * each version read, checks whether the version is still visible
+	 * as of the end of the transaction.
+	 */
+
+	for(auto v : ReadSet){
+		if(v->end < this->end){
+			return false;
+		}
+	}
+
+	/*
+	 * To check for phantoms, T walks its ScanSet and repeats each scan
+	 * looking for versions that came into existence during T’s lifetime
+	 * and are visible as of the end of the transaction.
+	 */
+	for(auto& v : ScanSet_Warehouse){
+		auto range = v.first->equal_range(v.second);
+
+		//start the scan
+		for(auto it = range.first; it != range.second; ++it){
+			//check predicate
+			if((it->second).w_id == v.second && (it->second).begin > this->begin && (it->second).end > this->end){
+				// phantom detected
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+/****************************************************************************/
+void Transaction::abort(){
+	this->state = State::Aborted;
+	this->AbortNow = true;
+}
+
+void Transaction::commit(){
+	/*
+	 * write log records here
+	 */
+
+	this->state = State::Committed;
+}
+
+
+void Transaction::precommit(){
+	this->state = State::Preparing;
+	this->end = getTimestamp();
+}
+
+/****************************************************************************/
 
 
 const int32_t warehouses=5;
@@ -240,6 +384,7 @@ const int32_t warehouses=5;
 int32_t urand(int32_t min,int32_t max) {
 	return (random()%(max-min+1))+min;
 }
+
 
 int32_t urandexcept(int32_t min,int32_t max,int32_t v) {
 	if (max<=min)
@@ -250,9 +395,13 @@ int32_t urandexcept(int32_t min,int32_t max,int32_t v) {
 			return r;
 }
 
+
+
 int32_t nurand(int32_t A,int32_t x,int32_t y) {
 	return ((((random()%A)|(random()%(y-x+1)+x))+42)%(y-x+1))+x;
 }
+
+
 
 void Transaction::execute(){
 	newOrderRandom(0);
@@ -277,10 +426,116 @@ void Transaction::execute(){
 		qty[i]=urand(1,10);
 	}
 	Timestamp datetime = 0;
-	/**********************************************************************/
+	/***************************************************************************************************/
+	/*
+	 * update district
+	 * set d_next_o_id=o_id+1
+	 * where d_w_id=w_id and district.d_id=d_id;
+	 */
+
+	/*
+	 * Begin the NORMAL PROCESSING PHASE
+	 */
+	Warehouse_Tuple* VN = dynamic_cast<Warehouse_Tuple*>(update("warehouse", Predicate((Integer) 4)));
+	if(!VN)
+		cout << "VN is null" << "\n";
+	else{
+		VN->w_street_1 = Varchar<20>::castString(string("changed2something").c_str(), string("changed2something").length());
+	}
+//		cout << "\n" << VN->begin << " " << VN->end << " | " << VN->w_id <<"\t" << VN->w_street_1 << "\n";
+
+	/***************************************************************************************************/
+	/*
+	 * End of NORMAL PROCESSING PHASE
+	 */
+	if(this->state != State::Aborted)
+		precommit();
+
+	/*
+	 * Begin of PREPARATION
+	 */
+
+	/*
+	 * VALIDATION
+	 */
+	if(validate()){
+		while(!this->AbortNow && CommitDepCounter!=0){
+			//usleep(200000);
+		}
+		if(!this->AbortNow && CommitDepCounter == 0){
+			commit();
+		}
+	}
+	else
+		abort();
+
+	/*
+	 * POSTPROCESSING PHASE
+	 *
+	 * During this phase a committed transaction TC propagates its end
+	 * timestamp to the Begin and End fields of new and old versions,
+	 * respectively, listed in its WriteSet. An aborted transaction TA sets
+	 * the Begin field of its new versions to infinity, thereby making
+	 * them invisible to all transactions, and attempts to reset the End
+	 * fields of its old versions to infinity.
+	 */
+	if(this->state == State::Committed){
+		for(auto& pair : this->WriteSet){
+			// for the old version
+			pair.first->end = this->end;
+			// for the new version
+			pair.second->begin = this->end;
+		}
+		// handle commit dependencies
+		for(auto& t : CommitDepSet){
+			try{
+				auto TD = TransactionManager.at(t);
+				TD->decreaseCommitDepCounter();
+				if(TD->CommitDepCounter == 0){
+					//wake TD up
+				}
+
+			} catch(out_of_range& oor){
+				// the dependent Transaction does not exist or is terminated
+				continue;
+			}
+		}
+	}
 
 
+	else if(this->state == State::Aborted){
+		for(auto& pair : this->WriteSet){
+			// for the old version
+			/*
+			 * another transaction may already have detected the abort,
+			 * created another new version and reset the End field of the
+			 * old version. If so, TA leaves the End field value unchanged.
+			 */
+			if(pair.first->end == this->Tid){
+				pair.first->end = INF;
+			}
+			// for the new version
+			pair.second->begin = INF;
+			pair.second->isGarbage = true;
+		}
 
+		// all commit dependent Transactions also have to abort
+		for(auto& t : CommitDepSet){
+			try{
+				auto TD = TransactionManager.at(t);
+				TD->abort();
+			} catch(out_of_range& oor){
+				// the dependent Transaction does not exist or is terminated
+				continue;
+			}
+		}
+	}
+
+	else
+		throw;
+
+	GarbageTransactions.push_back(this);
+	TransactionManager.erase(this->Tid);
 }
 
 

@@ -19,10 +19,12 @@ using namespace std;
 //}
 //bool sortByType (const Attribute& lhs, const Attribute& rhs);
 
-class Table
-{
-public:
+struct Table;
 
+extern vector<Table> tables;
+
+struct Table
+{
    /// Table name
    string name;
    /// List of attributes
@@ -32,9 +34,10 @@ public:
    /// Count of rows
    size_t size;
    /// Constructor
-   Table(const string name):name(name){};
+   Table(){};
    /// Destructor
    ~Table(){};
+
 
 //   virtual insert()
    bool operator==(const Table& table) const{
