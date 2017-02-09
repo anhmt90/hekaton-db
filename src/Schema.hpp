@@ -16,39 +16,25 @@
 #include <map>
 #include <utility>
 #include <vector>
-
 #include <algorithm>
 #include <chrono>
+#include <atomic>
 
 #include "Types.hpp"
 #include "Table.hpp"
-#include "Version.hpp"
 
 using namespace std;
 using namespace std::chrono;
-//using namespace types;
 
 typedef tuple<Integer, Integer> tup_2Int;
 typedef tuple<Integer, Integer, Integer> tup_3Int;
 typedef tuple<Integer, Integer, Integer, Integer> tup_4Int;
 
 
-//struct Key {
-//	Integer pk_int;
-//	tup_2Int pk_2int;
-//	tup_3Int pk_3int;
-//	tup_4Int pk_4int;
-//
-//	Key(Integer a){
-//		pk_int = a;
-//	}
-//
-//	Key
-//};
 
 /*---------------------------------------------------------Global Variables/Function----------------------------------------------------------*/
 //Global, monotonically increasing counter
-extern uint64_t GMI_cnt;
+extern atomic<uint64_t> GMI_cnt;
 //Represent infinite timestamp
 extern const uint64_t INF;
 //get Timestampe from GMI_cnt and increase it by 1
@@ -134,13 +120,9 @@ struct hash<tuple<Integer, Integer, Varchar<16>, Varchar<16>>> {
 
 /*--------------------------------Define structure of a row for each table-----------------------------------*/
 
-
-
-
-
 struct Version {
-	uint64_t begin;
-	uint64_t end;
+	uint64_t begin = 0;
+	uint64_t end = 0;
 //	Version* next;
 
 	bool isGarbage = false;
@@ -155,41 +137,110 @@ struct Version {
 		this->end = end;
 	}
 
-
-
 //	Version(){ }
 //	Version(uint64_t begin) : begin(begin), end(INF){ }
-//	~Version();
+//	virtual ~Version(){ };
+//	~Version(){ };
 };
 
+struct Warehouse : public Table{
+	struct Tuple : public Version{
+		Integer w_id;
+		Varchar<10> w_name;
+		Varchar<20> w_street_1, w_street_2, w_city;
+		Char<2> w_state;
+		Char<9> w_zip;
+		Numeric<4, 4> w_tax;
+		Numeric<12, 2> w_ytd;
 
-struct Warehouse_Tuple : public Version{
-	Integer w_id;
-	Varchar<10> w_name;
-	Varchar<20> w_street_1, w_street_2, w_city;
-	Char<2> w_state;
-	Char<9> w_zip;
-	Numeric<4, 4> w_tax;
-	Numeric<12, 2> w_ytd;
+		Tuple(){ };
+		Tuple(uint64_t begin){
+			this->begin = begin;
+		}
 
-	Warehouse_Tuple(uint64_t begin){
-		this->begin = begin;
+		Tuple(
+				Integer id,
+				Varchar<10> name,
+				Varchar<20> street_1,
+				Varchar<20> street_2,
+				Varchar<20> city,
+				Char<2> state,
+				Char<9> zip,
+				Numeric<4, 4> tax,
+				Numeric<12, 2> ytd
+		):
+			w_id(id), w_name(name), w_street_1(street_1), w_street_2(street_2), w_city(city),
+			w_state(state), w_zip(zip), w_tax(tax), w_ytd(ytd){ }
+	};
+
+	unordered_multimap<Integer, Warehouse::Tuple> pk_index;
+
+	Warehouse(){};
+	Warehouse(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
 	}
+	virtual ~Warehouse(){};
 
-	Warehouse_Tuple(
-			Integer id,
-			Varchar<10> name,
-			Varchar<20> street_1,
-			Varchar<20> street_2,
-			Varchar<20> city,
-			Char<2> state,
-			Char<9> zip,
-			Numeric<4, 4> tax,
-			Numeric<12, 2> ytd
-	):
-		w_id(id), w_name(name), w_street_1(street_1), w_street_2(street_2), w_city(city),
-		w_state(state), w_zip(zip), w_tax(tax), w_ytd(ytd){ }
+	void import();
+
+	Warehouse::Tuple* insert(Warehouse::Tuple);
+
+
 };
+
+struct OrderLine : public Table{
+	struct Tuple : public Version {
+		Integer ol_o_id, ol_d_id, ol_w_id, ol_number; //Pkey
+		Integer ol_i_id, ol_supply_w_id;
+		Timestamp ol_delivery_d;
+		Numeric<2, 0> ol_quantity;
+		Numeric<6, 2> ol_amount;
+		Char<24> ol_dist_info;
+
+		Tuple(uint64_t begin){
+			this->begin = begin;
+		}
+
+		Tuple(
+				Integer o_id,
+				Integer d_id,
+				Integer w_id,
+				Integer number,
+				Integer i_id,
+				Integer supply_w_id,
+				Timestamp delivery_d,
+				Numeric<2, 0> quantity,
+				Numeric<6, 2> amount,
+				Char<24> dist_info
+				):
+					ol_o_id(o_id), ol_d_id(d_id), ol_w_id(w_id), ol_number(number),
+					ol_i_id(i_id), ol_supply_w_id(supply_w_id), ol_delivery_d(delivery_d),
+					ol_quantity(quantity), ol_amount(amount), ol_dist_info(dist_info){
+
+		}
+	};
+
+	unordered_multimap<tup_4Int, OrderLine::Tuple> pk_index;
+
+	OrderLine(){};
+	OrderLine(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~OrderLine(){};
+
+	void import();
+
+	OrderLine::Tuple* insert(OrderLine::Tuple);
+};
+
+extern Warehouse warehouse;
+extern OrderLine orderline;
+
+
 
 struct District_Tuple {
 	Integer d_id, d_w_id; //PKey
@@ -337,34 +388,7 @@ struct Order_Tuple {
 	}
 };
 
-struct OrderLine_Tuple : public Version {
-	Integer ol_o_id, ol_d_id, ol_w_id, ol_number; //Pkey
-	Integer ol_i_id, ol_supply_w_id;
-	Timestamp ol_delivery_d;
-	Numeric<2, 0> ol_quantity;
-	Numeric<6, 2> ol_amount;
-	Char<24> ol_dist_info;
 
-	OrderLine_Tuple(){}
-
-	OrderLine_Tuple(
-			Integer o_id,
-			Integer d_id,
-			Integer w_id,
-			Integer number,
-			Integer i_id,
-			Integer supply_w_id,
-			Timestamp delivery_d,
-			Numeric<2, 0> quantity,
-			Numeric<6, 2> amount,
-			Char<24> dist_info
-			):
-				ol_o_id(o_id), ol_d_id(d_id), ol_w_id(w_id), ol_number(number),
-				ol_i_id(i_id), ol_supply_w_id(supply_w_id), ol_delivery_d(delivery_d),
-				ol_quantity(quantity), ol_amount(amount), ol_dist_info(dist_info){
-
-	}
-};
 
 struct Item_Tuple : public Version {
 	//uno_Tupleed_map<Integer, Integer> i_id;
@@ -421,8 +445,7 @@ struct Stock_Tuple {
 /*-----------------------------------------------------------------------------------------------------------------------*/
 
 
-typedef unordered_multimap<Integer, Warehouse_Tuple> Warehouse_PK;
-typedef unordered_multimap<tup_4Int, OrderLine_Tuple> OrderLine_PK;
+
 /*
  * Primary key indexes of each table as unordered_map
  * with key part is the primary key and value part is
@@ -438,40 +461,6 @@ typedef unordered_multimap<tup_4Int, OrderLine_Tuple> OrderLine_PK;
 //	unordered_map<Integer, Item_Tuple> item;
 //	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
-struct Warehouse_Table : public Table{
-	Warehouse_PK pk_index;
-
-	Warehouse_Table(){};
-	Warehouse_Table(string name){
-		this->name = name;
-		tables.push_back(*this);
-		import();
-	}
-	virtual ~Warehouse_Table(){};
-
-	void import();
-
-	Warehouse_Tuple* insert(Warehouse_Tuple);
-};
-
-struct OrderLine_Table : public Table{
-	OrderLine_PK pk_index;
-
-	OrderLine_Table(){};
-	OrderLine_Table(string name){
-		this->name = name;
-		tables.push_back(*this);
-		import();
-	}
-	virtual ~OrderLine_Table(){};
-
-	void import();
-
-	void insert(OrderLine_Tuple);
-};
-
-extern Warehouse_Table warehouse;
-extern OrderLine_Table orderline;
 
 void _import();
 //inline void Warehouse_Import(ifstream& );

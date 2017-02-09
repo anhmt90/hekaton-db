@@ -21,16 +21,16 @@
 //	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
 
 
-Warehouse_Table warehouse;
-OrderLine_Table orderline;
+Warehouse warehouse;
+OrderLine orderline;
 
 
 
-uint64_t GMI_cnt = 0;
+atomic<uint64_t> GMI_cnt{0};
 const uint64_t INF = ~(1ull<<63);
 
 uint64_t getTimestamp(){
-	return GMI_cnt++;
+	return ++GMI_cnt;
 }
 /*----------------------------------------Supporting functions-----------------------------------------------------------*/
 void close_ifstream(ifstream& itbl) {
@@ -437,7 +437,7 @@ TPCC::~TPCC() { }
 //}
 
 
-void Warehouse_Table::import(){
+void Warehouse::import(){
 	ifstream itbl("tbl/tpcc_warehouse.tbl");
 
 	if (!itbl) {
@@ -450,8 +450,8 @@ void Warehouse_Table::import(){
 		if (itbl.is_open()) {
 			while (getline(itbl, line)) {
 				vector<string> elm = split(line);
-				Warehouse_Tuple row = *(new Warehouse_Tuple(getTimestamp()));
-				row.w_id = Integer::castString(elm[0].c_str(), elm[0].length());
+				Warehouse::Tuple row = *(new Warehouse::Tuple(getTimestamp()));
+				row.w_id = row.w_id.castString(elm[0].c_str(), elm[0].length());
 				string anh = to_string(1);
 
 				row.w_name = row.w_name.castString(elm[1].c_str(), elm[1].length());
@@ -487,13 +487,9 @@ void Warehouse_Table::import(){
 //}
 
 
-Warehouse_Tuple* Warehouse_Table::insert(Warehouse_Tuple t ){
-	auto i = pk_index.insert(make_pair(t.w_id, t));
-	++this->size;
-	return &(i->second);
-}
 
-void OrderLine_Table::import(){
+
+void OrderLine::import(){
 	ifstream itbl("tbl/tpcc_orderline.tbl");
 	if (!itbl) {
 		// Print an error and exit
@@ -504,7 +500,7 @@ void OrderLine_Table::import(){
 		if (itbl.is_open()) {
 			while (getline(itbl, line)) {
 				vector<string> elm = split(line);
-				OrderLine_Tuple row;
+				OrderLine::Tuple row = *(new OrderLine::Tuple(getTimestamp()));
 				row.ol_o_id = row.ol_o_id.castString(elm[0].c_str(), elm[0].length()).value;
 				row.ol_d_id = row.ol_d_id.castString(elm[1].c_str(), elm[1].length());
 				row.ol_w_id = row.ol_w_id.castString(elm[2].c_str(), elm[2].length());
@@ -518,6 +514,7 @@ void OrderLine_Table::import(){
 				row.ol_amount = row.ol_amount.castString(elm[8].c_str(), elm[8].length());
 				row.ol_dist_info = row.ol_dist_info.castString(elm[9].c_str(), elm[9].length());
 
+				row.setEnd(INF);
 				pk_index.insert(make_pair(tup, row));
 			}
 			tables.back().attributes.push_back(Attribute("ol_o_id","Integer","orderline"));

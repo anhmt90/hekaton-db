@@ -7,17 +7,23 @@
 
 #include "Transaction.hpp"
 #include <unistd.h>
+#include <atomic>
+
 
 using namespace std;
 
 void newOrderRandom(Timestamp);
 
 /****************************************************************************/
-uint64_t GMI_tid = (1ull<<63) + 1;
+atomic<uint64_t> GMI_tid{1ull<<63};
 
 unordered_map<uint64_t,Transaction*> TransactionManager;
 
 vector<Transaction*> GarbageTransactions;
+
+uint64_t getTid(){
+	return ++GMI_tid;
+}
 
 /****************************************************************************/
 void Transaction::decreaseCommitDepCounter(){
@@ -31,9 +37,10 @@ void Transaction::decreaseCommitDepCounter(){
  * 			0 : V is invisible to T, just ignore V
  * 			-1 : reread V
  */
-int checkVisibility(Version& V, Transaction* T){
+int Transaction::checkVisibility(Version& V){
+	auto T = this;
 	// logical read time
-	auto RT = T->begin;
+	uint64_t RT = T->begin;
 	// CHECK VISIBILITY OF VERSIONS READ
 	/*
 	 * 1st case: Begin and End fields contain timestamps
@@ -42,7 +49,7 @@ int checkVisibility(Version& V, Transaction* T){
 
 	if((V.begin & 1ull<<63) == 0 && (V.end & 1ull<<63) == 0){
 		if(V.begin < RT && RT < V.end){
-			// V is visible to this transaction
+			// V is visible to the current transaction
 			// just read the version
 			return 1;
 		}
@@ -54,22 +61,24 @@ int checkVisibility(Version& V, Transaction* T){
 	/*
 	 * 2nd case: V's Begin field contains a transaction ID (of TB)
 	 */
-	else if ((V.begin & 1ull<<63) != 0 && (V.end & 1ull<<63) == 0){
+	else if ((V.begin & 1ull<<63) != 0){
 		try{
 			auto TB = TransactionManager.at(V.begin);
 			auto TS = TB->end;
 
 			if(TB->state == Transaction::State::Active && TS == NOT_SET){
-				if(TB->Tid == T->Tid && V.end == INF)
-				// for updating a version several time within a transaction
+				if(TB->Tid == T->Tid && V.end == INF){
+				// for updating a version several times by a same transaction
 				// just read V
 					return 1;
-				else
+				}
+				else{
 					return 0;
+				}
 			}
 
 			else if(TB->state == Transaction::State::Preparing && TS != NOT_SET){
-				if(V.begin < TS && V.end == INF){
+				if(TS < this->begin && V.end == INF){
 					//SPECULATIVELY read V
 					++(T->CommitDepCounter);
 					TB->CommitDepSet.push_back(T->Tid);
@@ -108,7 +117,7 @@ int checkVisibility(Version& V, Transaction* T){
 	/*
 	 * 3rd case: version's End field contains a transaction ID (of TE)
 	 */
-	else if (V.begin < RT && (V.end & 1ull<<63) != 0){
+	else if ((V.end & 1ull<<63) != 0){
 		try{
 			auto TE = TransactionManager.at(V.end);
 			auto TS = TE->end;
@@ -162,7 +171,8 @@ int checkVisibility(Version& V, Transaction* T){
 }
 
 /****************************************************************************/
-int checkUpdatibility(Version& V, Transaction* T){
+int Transaction::checkUpdatibility(Version& V){
+	auto T = this;
 	// V.end is a timestamp
 	if((V.end & 1ull<<63) == 0) {
 		if(V.end == INF)
@@ -201,7 +211,7 @@ int checkUpdatibility(Version& V, Transaction* T){
 }
 
 /****************************************************************************/
-Version* Transaction::read(string tableName, Predicate pred){
+Version* Transaction::read(string tableName, Predicate pred, bool from_update){
 	if(tableName == "warehouse"){
 		auto pkey = pred.pk_int;
 		//register the scan into ScanSet
@@ -212,18 +222,19 @@ Version* Transaction::read(string tableName, Predicate pred){
 		for(auto it = range.first; it != range.second; ++it){
 			// the scanned version
 //			Warehouse_Tuple V = new Warehouse_Tuple(this->Tid);
-			Warehouse_Tuple* V = &(it->second);
+			Warehouse::Tuple* V = &(it->second);
 			//check predicate
 			if(V->w_id != pkey)
 				continue;
 			else {
-				int res = checkVisibility(*V, this);
+				int res = checkVisibility(*V);
 				while(res == -1){
-					res = checkVisibility(*V, this);
+					res = checkVisibility(*V);
 				}
 				if(res == 1){
 					// adding V to ReadSet
-					this->ReadSet.push_back(V);
+					if(!from_update)
+						this->ReadSet.push_back(V);
 					return V;
 				}
 				else
@@ -238,14 +249,14 @@ Version* Transaction::read(string tableName, Predicate pred){
 
 		for(auto it = range.first; it != range.second; ++it){
 			// the scanned version
-			OrderLine_Tuple* V = &(it->second);
+			OrderLine::Tuple* V = &(it->second);
 			//check predicate
 			if(make_tuple(V->ol_o_id, V->ol_d_id, V->ol_w_id, V->ol_number) != pkey)
 				continue;
 			else {
-				int res = checkVisibility(*V, this);
+				int res = checkVisibility(*V);
 				while(res == -1){
-					res = checkVisibility(*V, this);
+					res = checkVisibility(*V);
 				}
 				if(res == 1){
 					// adding V to ReadSet
@@ -268,13 +279,17 @@ Version* Transaction::read(string tableName, Predicate pred){
  * set d_next_o_id=o_id+1
  * where d_w_id=w_id and district.d_id=d_id;
  */
-Version* Transaction::update(string tableName, Predicate pred){
-	Version* V = read(tableName, pred);
+/*
+ * @param:
+ * 		del : delete (true = delete, false = update)
+ */
+Version* Transaction::update(string tableName, Predicate pred, bool del){
+	Version* V = read(tableName, pred, true);
 	if(V){
-		auto updatable = checkUpdatibility(*V, this);
+		auto updatable = checkUpdatibility(*V);
 
 		while(updatable == -1)
-			updatable = checkUpdatibility(*V, this); // recheck
+			updatable = checkUpdatibility(*V); // recheck
 
 		if(updatable == 0)
 			return nullptr;
@@ -282,7 +297,13 @@ Version* Transaction::update(string tableName, Predicate pred){
 		// V can be updated
 		else if (updatable == 1){
 			if( (V->end & 1ull<<63) == 0){
-				V->end = this->Tid;		// set V's End field to Tid
+				// set V's End field to Tid
+				V->end = this->Tid;
+
+				if(del){
+					this->WriteSet.push_back(make_pair(V,nullptr));
+					return V;
+				}
 			}
 			else
 				// T must abort if there is another Transaction has sneaked into V
@@ -290,24 +311,22 @@ Version* Transaction::update(string tableName, Predicate pred){
 
 			// create a new version
 			if(tableName == "warehouse"){
-				Warehouse_Tuple* VN = new Warehouse_Tuple(NOT_SET);
-				*VN = *(dynamic_cast<Warehouse_Tuple*>(V));
+				Warehouse::Tuple* VN = new Warehouse::Tuple(NOT_SET);
+				*VN = *(dynamic_cast<Warehouse::Tuple*>(V));
 
-//				*VN = *V;
 				VN->begin = this->Tid;
 				VN->end = INF;
 
-//				Warehouse_Tuple* VN = dynamic_cast<Warehouse_Tuple*>(V);
+				// add the new version into the primary index
+				VN = &(warehouse.pk_index.insert(make_pair(VN->w_id, *VN))->second);
 
+				// add to WriteSet
 				this->WriteSet.push_back(make_pair(V,VN));
 				return VN;
-//				if(VN){
-//					vn->
-//					Warehouse_Tuple* i = Warehouse_Table::insert(*vn);
-//					return VN;
-//				}
 
-			} else if (tableName == "orderline"){
+			}
+
+			else if (tableName == "orderline"){
 
 			}
 
@@ -317,8 +336,62 @@ Version* Transaction::update(string tableName, Predicate pred){
 
 }
 
+//Warehouse::Tuple* Warehouse::insert(Warehouse::Tuple t){
+//	auto range = pk_index.equal_range(t.w_id);
+//
+//	//start the scan
+//	for(auto it = range.first; it != range.second; ++it){
+//		Warehouse::Tuple* V = &(it->second);
+//		//check predicate
+//		if(V->w_id == t.w_id){
+//
+//		}
+//
+//
+//		//	++this->size;
+//		return &(i->second);
+//	}
+//}
+
+Version* Transaction::insert(string tableName, Version* VI, Predicate pred){
+	//	Version* VN = read(tableName, pred, true);
+	if(tableName == "warehouse"){
+		auto pkey = pred.pk_int;
+		this->ScanSet_Warehouse.push_back(make_pair(&warehouse.pk_index, pkey));
+		auto range = warehouse.pk_index.equal_range(pred.pk_int);
+
+		//start the scan
+		for(auto it = range.first; it != range.second; ++it){
+			// the scanned version
+			// Warehouse_Tuple V = new Warehouse_Tuple(this->Tid);
+			Warehouse::Tuple* V = &(it->second);
+			//check predicate
+			if(V->w_id == pkey){
+				// check Visibility of the Version have the same predicate
+				if(checkVisibility(*V) == 1){
+					return nullptr;
+				}
+			}
+
+		}
+		VI = &(warehouse.pk_index.insert(make_pair(pkey, *(dynamic_cast<Warehouse::Tuple*>(VI))))->second);
+	}
+	else if(tableName == "orderline"){
+
+	}
+
+	if(VI->begin == 0 && VI->end == 0){
+		VI->begin = this->Tid;
+		VI->end = INF;
+		this->WriteSet.push_back(make_pair(nullptr, VI));
+		return VI;
+	}
+	else
+		throw;
+}
+
 /****************************************************************************/
-bool Transaction::validate(){
+int Transaction::validate(){
 	/*
 	 * Validation consists of two steps: checking visibility of the
 	 * versions read and checking for phantoms.
@@ -328,11 +401,15 @@ bool Transaction::validate(){
 	 * To check visibility transaction T scans its ReadSet and for
 	 * each version read, checks whether the version is still visible
 	 * as of the end of the transaction.
+	 *
+	 * @return: -1 visibility validation failed
 	 */
 
 	for(auto v : ReadSet){
-		if(v->end < this->end){
-			return false;
+		//if(v->end < INF  && v->end < this->end)
+		if(checkVisibility(*v) != 1)
+		{
+			return -1;
 		}
 	}
 
@@ -340,26 +417,35 @@ bool Transaction::validate(){
 	 * To check for phantoms, T walks its ScanSet and repeats each scan
 	 * looking for versions that came into existence during T’s lifetime
 	 * and are visible as of the end of the transaction.
+	 *
+	 * @return: -2 phantom validation failed
 	 */
 	for(auto& v : ScanSet_Warehouse){
 		auto range = v.first->equal_range(v.second);
-
+		warehouse.pk_index.begin();
 		//start the scan
 		for(auto it = range.first; it != range.second; ++it){
 			//check predicate
-			if((it->second).w_id == v.second && (it->second).begin > this->begin && (it->second).end > this->end){
-				// phantom detected
-				return false;
+			if((it->second).begin != this->Tid){
+				if((it->second).w_id == v.second
+						&& (it->second).begin < INF
+						&& (it->second).begin > this->begin
+						&& (it->second).end <= INF
+						&& (it->second).end > this->end){
+					// phantom detected
+					return -2;
+				}
 			}
 		}
 	}
 
-	return true;
+	return 1;
 }
 /****************************************************************************/
-void Transaction::abort(){
+void Transaction::abort(int code){
 	this->state = State::Aborted;
 	this->AbortNow = true;
+	this->CODE = code;
 }
 
 void Transaction::commit(){
@@ -404,30 +490,29 @@ int32_t nurand(int32_t A,int32_t x,int32_t y) {
 }
 
 
-
-void Transaction::execute(){
-	newOrderRandom(0);
+void Transaction::execute(int i){
+//	newOrderRandom(0);
 
 	/*
 	 * Randomize the input
 	 */
 
-	int32_t w_id=urand(1,warehouses);
-	int32_t d_id=urand(1,10);
-	int32_t c_id=nurand(1023,1,3000);
-	int32_t ol_cnt=urand(5,15);
-
-	int32_t supware[15];
-	int32_t itemid[15];
-	int32_t qty[15];
-	for (int32_t i=0; i<ol_cnt; i++) {
-		if (urand(1,100)>1)
-			supware[i]=w_id; else
-				supware[i]=urandexcept(1,warehouses,w_id);
-		itemid[i]=nurand(8191,1,100000);
-		qty[i]=urand(1,10);
-	}
-	Timestamp datetime = 0;
+//	int32_t w_id=urand(1,warehouses);
+//	int32_t d_id=urand(1,10);
+//	int32_t c_id=nurand(1023,1,3000);
+//	int32_t ol_cnt=urand(5,15);
+//
+//	int32_t supware[15];
+//	int32_t itemid[15];
+//	int32_t qty[15];
+//	for (int32_t i=0; i<ol_cnt; i++) {
+//		if (urand(1,100)>1)
+//			supware[i]=w_id; else
+//				supware[i]=urandexcept(1,warehouses,w_id);
+//		itemid[i]=nurand(8191,1,100000);
+//		qty[i]=urand(1,10);
+//	}
+//	Timestamp datetime = 0;
 	/***************************************************************************************************/
 	/*
 	 * update district
@@ -438,13 +523,108 @@ void Transaction::execute(){
 	/*
 	 * Begin the NORMAL PROCESSING PHASE
 	 */
-	Warehouse_Tuple* VN = dynamic_cast<Warehouse_Tuple*>(update("warehouse", Predicate((Integer) 4)));
-	if(!VN)
-		cout << "VN is null" << "\n";
-	else{
-		VN->w_street_1 = Varchar<20>::castString(string("changed2something").c_str(), string("changed2something").length());
+//	Warehouse_Tuple* VN = dynamic_cast<Warehouse_Tuple*>(update("warehouse", Predicate((Integer) 4), false));
+	if(i==1){
+		Warehouse::Tuple* V = dynamic_cast<Warehouse::Tuple*>(read("warehouse", Predicate(Integer(1)), false));
+		this->begin;
+		if(!V){
+			if(this->CommitDepCounter == 0)
+				abort(-9);
+			else
+				abort(-8);
+		}
+		else{
+			cout << " V is read!";
+//			cout << "Transaction " << (this->Tid - (1ull<<63))  << " sleeps for 2s... \n";
+//			std::this_thread::sleep_for(std::chrono::seconds(2));
+		}
 	}
-//		cout << "\n" << VN->begin << " " << VN->end << " | " << VN->w_id <<"\t" << VN->w_street_1 << "\n";
+
+	else if(i==2){
+//		cout << "Transaction " << (this->Tid - (1ull<<63))  << " sleeps for 2s... \n";
+//		std::this_thread::sleep_for(std::chrono::seconds(2));
+
+		Warehouse::Tuple* V = dynamic_cast<Warehouse::Tuple*>(update("warehouse", Predicate(Integer(1)), true));
+		if(!V){
+			abort(-10);
+		}
+		else
+			cout << "Transaction " << (this->Tid - (1ull<<63))  << " delete-operation done.\n";
+		warehouse.pk_index.begin();
+	}
+	else if(i==3){
+//		Warehouse::Tuple row = *(new Warehouse::Tuple(0));
+//		row.w_id = 6;
+//		row.w_name = row.w_name.castString(string("anhmt").c_str(), string("anhmt").length());
+//		row.w_street_1 = row.w_street_1.castString(string("a").c_str(), string("a").length());
+//		row.w_street_2 = row.w_street_2.castString(string("b").c_str(), string("b").length());
+//		row.w_city = row.w_city.castString(string("c").c_str(), string("c").length());
+//		row.w_state = row.w_state.castString(string("d").c_str(), string("d").length());
+//		row.w_zip = row.w_zip.castString(string("e").c_str(), string("e").length());
+//		row.w_tax = Numeric<4, 4>(1);
+//		row.w_ytd = Numeric<12, 2>(1);
+//
+//		auto V = dynamic_cast<Warehouse::Tuple*>(insert("warehouse", row,  Predicate(Integer(row.w_id))));
+//		if(!V){
+//			cout<<"cannot insert!\n";
+//			throw;
+//		}
+//		cout << "Transaction " << (Tid - (1ull<<63))  << " sleeps for 2s... \n";
+//		std::this_thread::sleep_for(std::chrono::seconds(2));
+//		warehouse.pk_index.begin();
+
+
+		Warehouse::Tuple* row = new Warehouse::Tuple(0);
+		row->w_id = 6;
+		row->w_name = row->w_name.castString(string("anhmt").c_str(), string("anhmt").length());
+		row->w_street_1 = row->w_street_1.castString(string("a").c_str(), string("a").length());
+		row->w_street_2 = row->w_street_2.castString(string("b").c_str(), string("b").length());
+		row->w_city = row->w_city.castString(string("c").c_str(), string("c").length());
+		row->w_state = row->w_state.castString(string("d").c_str(), string("d").length());
+		row->w_zip = row->w_zip.castString(string("e").c_str(), string("e").length());
+		row->w_tax = Numeric<4, 4>(1);
+		row->w_ytd = Numeric<12, 2>(1);
+
+		auto V = dynamic_cast<Warehouse::Tuple*>(insert("warehouse", row,  Predicate(Integer(row->w_id))));
+		if(!V){
+			cout<<"cannot insert!\n";
+			throw;
+		}
+//		cout << "Transaction " << (Tid - (1ull<<63))  << " sleeps for 5s... \n";
+//		std::this_thread::sleep_for(std::chrono::seconds(5));
+		warehouse.pk_index.begin();
+
+	}
+
+
+
+	else if(i==4){
+		cout << "Transaction " << (Tid - (1ull<<63))  << " sleeps for 2s... \n";
+		std::this_thread::sleep_for(std::chrono::seconds(2));
+		Warehouse::Tuple* row = new Warehouse::Tuple(0);
+		row->w_id = 7;
+		row->w_name = row->w_name.castString(string("anhmt").c_str(), string("anhmt").length());
+		row->w_street_1 = row->w_street_1.castString(string("a").c_str(), string("a").length());
+		row->w_street_2 = row->w_street_2.castString(string("b").c_str(), string("b").length());
+		row->w_city = row->w_city.castString(string("c").c_str(), string("c").length());
+		row->w_state = row->w_state.castString(string("d").c_str(), string("d").length());
+		row->w_zip = row->w_zip.castString(string("e").c_str(), string("e").length());
+		row->w_tax = Numeric<4, 4>(1);
+		row->w_ytd = Numeric<12, 2>(1);
+
+		auto V = dynamic_cast<Warehouse::Tuple*>(insert("warehouse", row,  Predicate(Integer(row->w_id))));
+		if(!V){
+			cout<<"cannot insert!\n";
+			throw;
+		}
+		cout << "Transaction " << (Tid - (1ull<<63))  << " done.\n";
+		warehouse.pk_index.begin();
+	}
+
+//	else{
+//		VN->w_street_1 = Varchar<20>::castString(string("changed2something").c_str(), string("changed2something").length());
+//		warehouse.pk_index.begin();
+//	}
 
 	/***************************************************************************************************/
 	/*
@@ -454,23 +634,35 @@ void Transaction::execute(){
 		precommit();
 
 	/*
-	 * Begin of PREPARATION
+	 * Begin of PREPARATION PHASE
 	 */
+
+	//Testing cascaded abort and commit dependencies
+	if((this->Tid - (1ull<<63)) == 1){
+		cout << "Transaction " << (this->Tid - (1ull<<63))  << " sleeps for 300s... \n";
+		std::this_thread::sleep_for(std::chrono::seconds(300));
+//		abort(-100);
+	}
 
 	/*
 	 * VALIDATION
 	 */
-	if(validate() && this->state != State::Aborted){
-		while(!this->AbortNow && CommitDepCounter!=0){
-			//usleep(200000);
+	int valid = 0;
+	if(this->state != State::Aborted){
+		valid = validate();
+		if( valid > 0 && this->state != State::Aborted){
+			// the Transaction must wait here for commit dependencies if there are any
+			while(CommitDepCounter!=0 && !(this->AbortNow)){
+				cout << "Transaction " << (this->Tid - (1ull<<63))  << " is waiting for CommitDep... \n";
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			}
+			if(!this->AbortNow && CommitDepCounter == 0){
+				commit();
+			}
 		}
-		if(!this->AbortNow && CommitDepCounter == 0){
-			commit();
-		}
+		else
+			abort(valid);
 	}
-	else
-		abort();
-
 	/*
 	 * POSTPROCESSING PHASE
 	 *
@@ -484,9 +676,18 @@ void Transaction::execute(){
 	if(this->state == State::Committed){
 		for(auto& pair : this->WriteSet){
 			// for the old version
-			pair.first->end = this->end;
+			if(pair.first){
+				pair.first->end = this->end;
+				pair.first->isGarbage = true;
+			}
 			// for the new version
-			pair.second->begin = this->end;
+			if(pair.second){
+				pair.second->begin = this->end;
+			}
+			// for delete operation
+			else{
+				continue;
+			}
 		}
 		// handle commit dependencies
 		for(auto& t : CommitDepSet){
@@ -502,6 +703,8 @@ void Transaction::execute(){
 				continue;
 			}
 		}
+
+		this->CODE = 1;
 	}
 
 
@@ -513,19 +716,26 @@ void Transaction::execute(){
 			 * created another new version and reset the End field of the
 			 * old version. If so, TA leaves the End field value unchanged.
 			 */
-			if(pair.first->end == this->Tid){
+			if(pair.first && pair.first->end == this->Tid){
 				pair.first->end = INF;
 			}
 			// for the new version
-			pair.second->begin = INF;
-			pair.second->isGarbage = true;
+			if(pair.second){
+				pair.second->begin = INF;
+				pair.second->isGarbage = true;
+			}
+			//for delete operation
+			else {
+				continue;
+			}
 		}
 
 		// all commit dependent Transactions also have to abort
 		for(auto& t : CommitDepSet){
 			try{
 				auto TD = TransactionManager.at(t);
-				TD->abort();
+				// -19: cascaded abort code
+				TD->abort(-19);
 			} catch(out_of_range& oor){
 				// the dependent Transaction does not exist or is terminated
 				continue;
@@ -533,9 +743,16 @@ void Transaction::execute(){
 		}
 	}
 
+//	switch(CODE){
+//	case -1:
+//		cout << "Transaction "<< this->Tid << " aborted ";
+//	}
 	else
 		throw;
 
+	cout << "Tid = " << (this->Tid - (1ull<<63)) << ", Code = " << (this->CODE) << ", begin = " << begin << ", end = " << end << "\n";
+
+	warehouse.pk_index.begin();
 	GarbageTransactions.push_back(this);
 	TransactionManager.erase(this->Tid);
 }
@@ -550,84 +767,6 @@ void Transaction::execute(){
 
 
 /*****************************************************************************************************************/
-
-
-
-void newOrder(int32_t w_id, int32_t d_id, int32_t c_id, int32_t items, int32_t supware[15],
-		int32_t itemid[15], int32_t qty[15], Timestamp datetime){
-	try{
-
-		//		//Select
-		//		auto i_w = (tpcc->warehouse).at(w_id);
-		//		auto w_tax = (tpcc->warehouse)[i_w].w_tax.value;
-		//
-		//		auto i_c = (tpcc->customer_ix).at(make_tuple((Integer)c_id, (Integer) d_id, (Integer) w_id));
-		//		auto c_discount = (tpcc->customer)[i_c].c_discount.value;
-		//
-		//		auto i_d = (tpcc->district_ix).at(make_tuple((Integer)d_id, (Integer)w_id));
-		//		auto o_id = (tpcc->district)[i_d].d_next_o_id.value;
-		//		auto d_tax = (tpcc->district)[i_d].d_tax.value;
-		//
-		//		//Update
-		//		(tpcc->district)[i_d].d_next_o_id = o_id+1;
-		//
-		//		int64_t all_local = 1;
-		//
-		//		for(int32_t index = 0; index < items; index++){
-		//			if(w_id != supware[index])
-		//				all_local = 0;
-		//		}
-		//
-		//		//Insert
-		//		tpcc->TPCC::o_Insert(make_tuple((Integer)o_id, (Integer)d_id, (Integer)w_id), *(new o_Row(o_id, d_id, w_id,c_id,
-		//				datetime,0,items,all_local)));
-		//		tpcc->no_Insert(make_tuple((Integer)o_id, (Integer)d_id, (Integer)w_id), *(new no_Row((Integer)o_id, (Integer)d_id, (Integer)w_id)));
-		//
-		//		for(int32_t index = 0; index < items; index++){
-		//			auto i_i = (tpcc->item_ix).at(itemid[index]);
-		//			auto i_price = (tpcc->item)[i_i].i_price.value;
-		//
-		//			auto i_s = (tpcc->stock_ix).at(make_tuple(itemid[index],supware[index]));
-		//			auto s_dist = (tpcc->stock)[i_s].s_dist_01;
-		//			switch(d_id){
-		//			case 2: s_dist = (tpcc->stock)[i_s].s_dist_02; break;
-		//			case 3: s_dist = (tpcc->stock)[i_s].s_dist_03; break;
-		//			case 4: s_dist = (tpcc->stock)[i_s].s_dist_04; break;
-		//			case 5: s_dist = (tpcc->stock)[i_s].s_dist_05; break;
-		//			case 6: s_dist = (tpcc->stock)[i_s].s_dist_06; break;
-		//			case 7: s_dist = (tpcc->stock)[i_s].s_dist_07; break;
-		//			case 8: s_dist = (tpcc->stock)[i_s].s_dist_08; break;
-		//			case 9: s_dist = (tpcc->stock)[i_s].s_dist_09; break;
-		//			case 10: s_dist = (tpcc->stock)[i_s].s_dist_10; break;
-		//			default: s_dist = (tpcc->stock)[i_s].s_dist_01; break;
-		//			}
-		//
-		//			//cout << selection.s_quantity <<"\t"<< selection.s_remote_cnt <<"\t"<< selection.s_order_cnt <<"\t"<< s_dist << "\n";
-		//			if((tpcc->stock)[i_s].s_quantity > qty[index]){
-		//				(tpcc->stock)[i_s].s_quantity = (tpcc->stock)[i_s].s_quantity - qty[index];
-		//			} else {
-		//				(tpcc->stock)[i_s].s_quantity = (tpcc->stock)[i_s].s_quantity + 91 - qty[index];
-		//			}
-		//
-		//			i_s = (tpcc->stock_ix).at(make_tuple(itemid[index],w_id));
-		//			if(supware[index] != w_id){
-		//				(tpcc->stock)[i_s].s_remote_cnt+=1;
-		//			} else {
-		//				(tpcc->stock)[i_s].s_order_cnt+=1;
-		//			}
-		//
-		//			auto ol_amount = (qty[index] * (i_price) * (1.0 + w_tax + d_tax) * (1.0 - c_discount));
-		//
-		//			tpcc->ol_Insert(make_tuple((Integer)o_id, (Integer)d_id, (Integer)w_id, (Integer)index+1),
-		//					*(new ol_Row((Integer)o_id, (Integer)d_id, (Integer)w_id, (Integer)index+1, itemid[index], supware[index],0, qty[index], ol_amount, s_dist)));
-
-
-		//	}
-	}catch(out_of_range &oor){
-		//c++;
-	}
-
-}
 
 void newOrderRandom(Timestamp now) {
 	int32_t w_id=urand(1,warehouses);
@@ -646,5 +785,5 @@ void newOrderRandom(Timestamp now) {
 		qty[i]=urand(1,10);
 	}
 
-	newOrder(w_id,d_id,c_id,ol_cnt,supware,itemid,qty,now);
+//	newOrder(w_id,d_id,c_id,ol_cnt,supware,itemid,qty,now);
 }

@@ -4,6 +4,15 @@
  *  Created on: Jan 23, 2017
  *      Author: anhmt90
  */
+/*
+ * Abort CODE:
+ * 				1 = commit succeeds
+ * 				-1 = Vissibility validation failed
+ * 				-2 = Phantom validation failed
+ * 				-19 = cascaded abort by commit dependency
+ *
+ */
+
 
 #ifndef SRC_TRANSACTION_HPP_
 #define SRC_TRANSACTION_HPP_
@@ -11,10 +20,14 @@
 #include <climits>	//for CHAR_BIT
 #include <set>
 #include <cstdint>
+#include <atomic>
+#include <thread>
 
 #include "Schema.hpp"
 
 using namespace std;
+typedef unordered_multimap<Integer, Warehouse::Tuple> Warehouse_PK;
+typedef unordered_multimap<tup_4Int, OrderLine::Tuple> OrderLine_PK;
 /****************************************************************************/
 struct Transaction;
 
@@ -22,7 +35,7 @@ struct Transaction;
 const uint64_t NOT_SET = 1ull<<63;
 
 // counter to generate the Transactions ID
-extern uint64_t GMI_tid;
+extern atomic<uint64_t> GMI_tid;
 
 // container to manage all running Transactions
 extern unordered_map<uint64_t,Transaction*> TransactionManager;
@@ -31,12 +44,13 @@ extern unordered_map<uint64_t,Transaction*> TransactionManager;
 extern vector<Transaction*> GarbageTransactions;
 
 /****************************************************************************/
+uint64_t getTid();
+/****************************************************************************/
 
 class TransactionNotFoundException : public exception {
 public:
 	TransactionNotFoundException(){}
 };
-
 
 
 struct Predicate {
@@ -71,7 +85,7 @@ struct Transaction{
 	// Transaction ID
 	const uint64_t Tid;
 	// begin time of the transaction, also used as logical read time
-	uint64_t begin;
+	const uint64_t begin;
 	/*
 	 *  end time of the transaction, will be set as INF in the constructor,
 	 *  will be set by getTimestamp() again when the transaction precommits.
@@ -79,7 +93,7 @@ struct Transaction{
 	uint64_t end;
 
 	/*
-	 * counts how many unresolved commit deps this transaction still has.
+	 * counts how many unresolved commit dependencies this transaction still has.
 	 * A transaction cannot commit until this counter = 0
 	 */
 	int CommitDepCounter = 0;
@@ -90,24 +104,25 @@ struct Transaction{
 	 */
 	bool AbortNow = false;
 
+	//terminate code
+	int CODE;
+
+	/* each transaction can be in 1 of 4 states */
+	enum class State : unsigned {Active, Preparing, Committed, Aborted};
+	State state;
+
 	/*
 	 * stores Tid of the transactions that depend on this transaction
 	 */
 	vector<uint64_t> CommitDepSet;
 
 	/*
-	 *
+	 *	stores the Versions read, not ones updated
 	 */
 	vector<Version*> ReadSet;
 
 	vector<pair<Warehouse_PK*,Integer>> ScanSet_Warehouse;
 	vector<pair<OrderLine_PK*,tup_4Int>> ScanSet_OrderLine;
-
-//	template<typename Functor>
-//	void rescan(Functor &f) {
-//	  f(ScanSet_Warehouse);
-//	  f(ScanSet_OrderLine);
-//	}
 	/*
 	 * first: old version
 	 * second: new version
@@ -115,15 +130,9 @@ struct Transaction{
 	 */
 	vector<pair<Version*, Version*>> WriteSet;
 
-
-
-
-	/* each transaction can be in 1 of 4 states */
-	enum class State : unsigned {Active, Preparing, Committed, Aborted};
-	State state;
-
-	Transaction():Tid(GMI_tid++),begin(getTimestamp()), end(1ull<<63), state(State::Active){
-		execute();
+	Transaction(int i):Tid(getTid()),begin(getTimestamp()), end(1ull<<63), state(State::Active){
+		TransactionManager.insert(make_pair(Tid, this));
+		execute(i);
 	}
 
 	~Transaction(){ };
@@ -133,17 +142,20 @@ struct Transaction{
 //	}
 	void decreaseCommitDepCounter();
 
-	void execute();
+	int checkVisibility(Version&);
+	int checkUpdatibility(Version&);
 
-	Version* read(string, Predicate);
+	void execute(int);
 
-	Version* update(string, Predicate);
+	Version* read(string, Predicate, bool);
+	Version* update(string, Predicate, bool);
+	Version* insert(string tableName, Version* VI, Predicate pred);
 
 	void precommit();
-	void abort();
+	void abort(int);
 	void commit();
 
-	bool validate();
+	int validate();
 
 
 };
