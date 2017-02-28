@@ -123,7 +123,7 @@ struct hash<tuple<Integer, Integer, Varchar<16>, Varchar<16>>> {
 struct Version {
 	uint64_t begin = 0;
 	uint64_t end = 0;
-//	Version* next;
+	// Version* next;
 
 	bool isGarbage = false;
 
@@ -137,10 +137,8 @@ struct Version {
 		this->end = end;
 	}
 
-//	Version(){ }
-//	Version(uint64_t begin) : begin(begin), end(INF){ }
-//	virtual ~Version(){ };
-//	~Version(){ };
+	Version(){ }
+	virtual ~Version(){ };
 };
 
 struct Warehouse : public Table{
@@ -175,20 +173,245 @@ struct Warehouse : public Table{
 
 	unordered_multimap<Integer, Warehouse::Tuple> pk_index;
 
-	Warehouse(){};
-	Warehouse(string name){
-		this->name = name;
+	Warehouse(){
+		this->name = "warehouse";
 		tables.push_back(*this);
 		import();
 	}
 	virtual ~Warehouse(){};
-
 	void import();
-
-	Warehouse::Tuple* insert(Warehouse::Tuple);
 
 
 };
+
+
+
+
+
+struct District : public Table{
+	struct Tuple : public Version{
+		Integer d_id, d_w_id; //PKey
+		Varchar<10> d_name;
+		Varchar<20> d_street_1, d_street_2, d_city;
+		Char<2> d_state;
+		Char<9> d_zip;
+		Numeric<4, 4> d_tax;
+		Numeric<12, 2> d_ytd;
+		Integer d_next_o_id;
+
+		Tuple(){}
+
+		Tuple(
+				Integer id,
+				Integer w_id,
+				Varchar<10> name,
+				Varchar<20> street_1,
+				Varchar<20> street_2,
+				Varchar<20> city,
+				Char<2> state,
+				Char<9> zip,
+				Numeric<4, 4> tax,
+				Numeric<12, 2> ytd,
+				Integer next_o_id
+		):
+			d_id(id), d_w_id(w_id),
+			d_name(name), d_street_1(street_1), d_street_2(street_2), d_city(city),
+			d_state(state), d_zip(zip), d_tax(tax), d_ytd(ytd),
+			d_next_o_id(next_o_id){ }
+
+	};
+
+	unordered_multimap<tup_2Int, District::Tuple> pk_index;
+
+	District(){
+		this->name = "district";
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~District(){};
+	void import();
+};
+
+
+
+
+
+struct Customer : public Table{
+	struct Tuple : public Version {
+		Integer c_id, c_d_id, c_w_id; //Pkey
+		Varchar<16> c_first;
+		Char<2> c_middle;
+		Varchar<16> c_last;
+		Varchar<20> c_street_1, c_street_2, c_city;
+		Char<2>  c_state;
+		Char<9> c_zip;
+		Char<16> c_phone;
+		Timestamp c_since;
+		Char<2> c_credit;
+		Numeric<12, 2> c_credit_lim;
+		Numeric<4, 4> c_discount;
+		Numeric<12, 2> c_balance,c_ytd_payment;
+		Numeric<4, 0> c_payment_cnt, c_delivery_cnt;
+		Varchar<500> c_data;
+
+		Tuple(){}
+
+		Tuple(
+				Integer id,
+				Integer d_id,
+				Integer w_id,
+				Varchar<16> first,
+				Char<2> middle,
+				Varchar<16> last,
+				Varchar<20> street_1,
+				Varchar<20> street_2,
+				Varchar<20> city,
+				Char<2>  state,
+				Char<9> zip,
+				Char<16> phone,
+				Timestamp since,
+				Char<2> credit,
+				Numeric<12, 2> credit_lim,
+				Numeric<4, 4> discount,
+				Numeric<12, 2> balance,
+				Numeric<12, 2> ytd_payment,
+				Numeric<4, 0> payment_cnt,
+				Numeric<4, 0> delivery_cnt,
+				Varchar<500> data
+		):
+			c_id(id), c_d_id(d_id), c_w_id(w_id),
+			c_first(first), c_middle(middle), c_last(last),
+			c_street_1(street_1), c_street_2(street_2), c_city(city),
+			c_state(state), c_zip(zip), c_phone(phone), c_since(since),
+			c_credit(credit),c_credit_lim(credit_lim), c_discount(discount),
+			c_balance(balance), c_ytd_payment(ytd_payment),
+			c_payment_cnt(payment_cnt), c_delivery_cnt(delivery_cnt), c_data(data){ }
+	};
+	unordered_multimap<tup_3Int, Customer::Tuple> pk_index;
+
+	Customer(){
+		this->name = "customer";
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~Customer(){};
+	void import();
+};
+
+
+
+
+
+struct History : public Table{
+	struct Tuple : public Version {
+		Integer h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id;
+		Timestamp h_date;
+		Numeric<6, 2> h_amount;
+		Varchar<24> h_data;
+
+		Tuple(){}
+
+		Tuple(	Integer c_id,
+				Integer c_d_id,
+				Integer c_w_id,
+				Integer d_id,
+				Integer w_id,
+				Timestamp date,
+				Numeric<6, 2> amount,
+				Varchar<24> data
+		):
+			h_c_id(c_id), h_c_d_id(c_d_id), h_c_w_id(c_w_id),
+			h_d_id(d_id), h_w_id(w_id), h_date(date),
+			h_amount(amount), h_data(data){}
+	};
+
+	History(){
+		this->name = "history";
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~History(){};
+	void import();
+};
+
+
+
+
+
+
+struct NewOrder : public Table{
+	struct Tuple : public Version {
+		Integer no_o_id, no_d_id, no_w_id; //Pkey
+
+		Tuple(){}
+
+		Tuple(Integer o_id, Integer d_id, Integer w_id):
+			no_o_id(o_id), no_d_id(d_id), no_w_id(w_id){
+
+		}
+	};
+
+	unordered_multimap<tup_3Int, NewOrder::Tuple> pk_index;
+
+	NewOrder(){};
+	NewOrder(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~NewOrder(){};
+	void import();
+};
+
+
+
+
+
+
+struct Order : public Table{
+	struct Tuple : public Version{
+		Integer o_id, o_d_id, o_w_id; //Pkey
+		Integer o_c_id;
+		Timestamp o_entry_d;
+		Integer o_carrier_id;
+		Numeric<2, 0> o_ol_cnt;
+		Numeric<1, 0> o_all_local;
+
+		Tuple(){}
+
+		Tuple(
+				Integer id,
+				Integer d_id,
+				Integer w_id,
+				Integer c_id,
+				Timestamp entry_d,
+				Integer carrier_id,
+				Numeric<2,0> ol_cnt,
+				Numeric<1, 0> all_local
+			):
+					o_id(id), o_d_id(d_id), o_w_id(w_id),
+					o_c_id(c_id), o_entry_d(entry_d), o_carrier_id(carrier_id),
+					o_ol_cnt(ol_cnt), o_all_local(all_local){
+
+		}
+	};
+
+	unordered_multimap<tup_3Int, Order::Tuple> pk_index;
+
+	Order(){};
+	Order(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~Order(){};
+	void import();
+};
+
+
+
+
+
 
 struct OrderLine : public Table{
 	struct Tuple : public Version {
@@ -215,233 +438,134 @@ struct OrderLine : public Table{
 				Numeric<6, 2> amount,
 				Char<24> dist_info
 				):
-					ol_o_id(o_id), ol_d_id(d_id), ol_w_id(w_id), ol_number(number),
-					ol_i_id(i_id), ol_supply_w_id(supply_w_id), ol_delivery_d(delivery_d),
-					ol_quantity(quantity), ol_amount(amount), ol_dist_info(dist_info){
+					ol_o_id(o_id), ol_d_id(d_id), ol_w_id(w_id),
+					ol_number(number), ol_i_id(i_id),
+					ol_supply_w_id(supply_w_id), ol_delivery_d(delivery_d),
+					ol_quantity(quantity), ol_amount(amount),
+					ol_dist_info(dist_info){
 
 		}
 	};
 
 	unordered_multimap<tup_4Int, OrderLine::Tuple> pk_index;
 
-	OrderLine(){};
-	OrderLine(string name){
-		this->name = name;
+	OrderLine(){
+		this->name = "orderline";
 		tables.push_back(*this);
 		import();
 	}
 	virtual ~OrderLine(){};
+	void import();
+};
 
+struct Item : public Table{
+	struct Tuple : public Version {
+		Integer i_id;	//Pkey
+		Integer i_im_id;
+		Varchar<24> i_name;
+		Numeric<5, 2> i_price;
+		Varchar<50> i_data;
+
+
+		Tuple(){}
+
+		Tuple(
+				Integer id,
+				Integer im_id,
+				Varchar<24> name,
+				Numeric<5, 2> price,
+				Varchar<50> data
+		):
+				i_id(id),
+				i_im_id(im_id), i_name(name), i_price(price),
+				i_data(data){ }
+	};
+	unordered_multimap<Integer, Item::Tuple> pk_index;
+
+	Item(){};
+	Item(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~Item(){};
 	void import();
 
-	OrderLine::Tuple* insert(OrderLine::Tuple);
 };
+
+struct Stock : public Table{
+	struct Tuple : public Version{
+		Integer s_i_id, s_w_id; //Pkey
+		Numeric<4, 0> s_quantity;
+		Char<24> s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06,
+		s_dist_07, s_dist_08, s_dist_09, s_dist_10;
+		Numeric<8, 0> s_ytd;
+		Numeric<4, 0> s_order_cnt, s_remote_cnt;
+		Varchar<50> s_data;
+
+		Tuple(){}
+
+		Tuple(
+				Integer i_id,
+				Integer w_id,
+				Numeric<4, 0> quantity,
+				Char<24> dist_01, Char<24> dist_02, Char<24> dist_03, Char<24> dist_04,
+				Char<24> dist_05, Char<24> dist_06, Char<24> dist_07, Char<24> dist_08,
+				Char<24> dist_09, Char<24> dist_10,
+				Numeric<8, 0> ytd,
+				Numeric<4, 0> order_cnt,
+				Numeric<4, 0> remote_cnt,
+				Varchar<50> data
+		):
+			s_i_id(i_id), s_w_id(w_id),
+			s_quantity(quantity), s_dist_01(dist_01), s_dist_02(dist_02), s_dist_03(dist_03),
+			s_dist_04(dist_04),s_dist_05(dist_05), s_dist_06(dist_06),
+			s_dist_07(dist_07), s_dist_08(dist_08),s_dist_09(dist_09), s_dist_10(dist_10),
+			s_ytd(ytd), s_order_cnt(order_cnt), s_remote_cnt(remote_cnt), s_data(data){ }
+	};
+
+	unordered_multimap<tup_2Int, Stock::Tuple> pk_index;
+
+	Stock(){};
+	Stock(string name){
+		this->name = name;
+		tables.push_back(*this);
+		import();
+	}
+	virtual ~Stock(){};
+	void import();
+};
+
+
+
 
 extern Warehouse warehouse;
+extern District district;
+extern Customer customer;
+extern NewOrder neworder;
+extern Order order;
 extern OrderLine orderline;
+extern Item item;
+extern Stock stock;
 
 
 
-struct District_Tuple {
-	Integer d_id, d_w_id; //PKey
-	Varchar<10> d_name;
-	Varchar<20> d_street_1, d_street_2, d_city;
-	Char<2> d_state;
-	Char<9> d_zip;
-	Numeric<4, 4> d_tax;
-	Numeric<12, 2> d_ytd;
-	Integer d_next_o_id;
-
-	District_Tuple(){}
-
-	District_Tuple(
-			Integer id,
-			Integer w_id,
-			Varchar<10> name,
-			Varchar<20> street_1,
-			Varchar<20> street_2,
-			Varchar<20> city,
-			Char<2> state,
-			Char<9> zip,
-			Numeric<4, 4> tax,
-			Numeric<12, 2> ytd,
-			Integer next_o_id
-	):
-		d_id(id), d_w_id(w_id),
-		d_name(name), d_street_1(street_1), d_street_2(street_2), d_city(city),
-		d_state(state), d_zip(zip), d_tax(tax), d_ytd(ytd),
-		d_next_o_id(next_o_id){ }
-
-};
-
-struct Customer_Tuple {
-	Integer c_id, c_d_id, c_w_id; //Pkey
-	Varchar<16> c_first;
-	Char<2> c_middle;
-	Varchar<16> c_last;
-	Varchar<20> c_street_1, c_street_2, c_city;
-	Char<2>  c_state;
-	Char<9> c_zip;
-	Char<16> c_phone;
-	Timestamp c_since;
-	Char<2> c_credit;
-	Numeric<12, 2> c_credit_lim;
-	Numeric<4, 4> c_discount;
-	Numeric<12, 2> c_balance,c_ytd_payment;
-	Numeric<4, 0> c_payment_cnt, c_delivery_cnt;
-	Varchar<500> c_data;
-
-	Customer_Tuple(){}
-
-	Customer_Tuple(
-			Integer id,
-			Integer d_id,
-			Integer w_id,
-			Varchar<16> first,
-			Char<2> middle,
-			Varchar<16> last,
-			Varchar<20> street_1,
-			Varchar<20> street_2,
-			Varchar<20> city,
-			Char<2>  state,
-			Char<9> zip,
-			Char<16> phone,
-			Timestamp since,
-			Char<2> credit,
-			Numeric<12, 2> credit_lim,
-			Numeric<4, 4> discount,
-			Numeric<12, 2> balance,
-			Numeric<12, 2> ytd_payment,
-			Numeric<4, 0> payment_cnt,
-			Numeric<4, 0> delivery_cnt,
-			Varchar<500> data
-	):
-		c_id(id), c_d_id(d_id), c_w_id(w_id),
-		c_first(first), c_middle(middle), c_last(last),
-		c_street_1(street_1), c_street_2(street_2), c_city(city),
-		c_state(state), c_zip(zip), c_phone(phone), c_since(since),
-		c_credit(credit),c_credit_lim(credit_lim), c_discount(discount),
-		c_balance(balance), c_ytd_payment(ytd_payment),
-		c_payment_cnt(payment_cnt), c_delivery_cnt(delivery_cnt), c_data(data){ }
-};
-
-struct History_Tuple {
-	Integer h_c_id, h_c_d_id, h_c_w_id, h_d_id, h_w_id;
-	Timestamp h_date;
-	Numeric<6, 2> h_amount;
-	Varchar<24> h_data;
-
-	History_Tuple(){}
-
-	History_Tuple(	Integer c_id,
-			Integer c_d_id,
-			Integer c_w_id,
-			Integer d_id,
-			Integer w_id,
-			Timestamp date,
-			Numeric<6, 2> amount,
-			Varchar<24> data
-	):
-		h_c_id(c_id), h_c_d_id(c_d_id), h_c_w_id(c_w_id),
-		h_d_id(d_id), h_w_id(w_id), h_date(date),
-		h_amount(amount), h_data(data){}
+typedef unordered_multimap<Integer, Warehouse::Tuple> Warehouse_PK;
+typedef unordered_multimap<tup_2Int, District::Tuple> District_PK;
+typedef unordered_multimap<tup_3Int, Customer::Tuple> Customer_PK;
+typedef unordered_multimap<tup_3Int, NewOrder::Tuple> NewOrder_PK;
+typedef unordered_multimap<tup_3Int, Order::Tuple> Order_PK;
+typedef unordered_multimap<tup_4Int, OrderLine::Tuple> OrderLine_PK;
+typedef unordered_multimap<Integer, Item::Tuple> Item_PK;
+typedef unordered_multimap<tup_2Int, Stock::Tuple> Stock_PK;
 
 
 
-};
-
-struct NewOrder_Tuple {
-	Integer no_o_id, no_d_id, no_w_id; //Pkey
-
-	NewOrder_Tuple(){}
-
-	NewOrder_Tuple(Integer o_id, Integer d_id, Integer w_id):
-		no_o_id(o_id), no_d_id(d_id), no_w_id(w_id){
-
-	}
-};
-
-struct Order_Tuple {
-	Integer o_id, o_d_id, o_w_id; //Pkey
-	Integer o_c_id;
-	Timestamp o_entry_d;
-	Integer o_carrier_id;
-	Numeric<2, 0> o_ol_cnt;
-	Numeric<1, 0> o_all_local;
-
-	Order_Tuple(){}
-
-	Order_Tuple(
-			Integer id,
-			Integer d_id,
-			Integer w_id,
-			Integer c_id,
-			Timestamp entry_d,
-			Integer carrier_id,
-			Numeric<2,0> ol_cnt,
-			Numeric<1, 0> all_local
-		):
-				o_id(id), o_d_id(d_id), o_w_id(w_id),
-				o_c_id(c_id), o_entry_d(entry_d), o_carrier_id(carrier_id),
-				o_ol_cnt(ol_cnt), o_all_local(all_local){
-
-	}
-};
 
 
 
-struct Item_Tuple : public Version {
-	//uno_Tupleed_map<Integer, Integer> i_id;
-	Integer i_id;	//Pkey
-	Integer i_im_id;
-	Varchar<24> i_name;
-	Numeric<5, 2> i_price;
-	Varchar<50> i_data;
 
 
-	Item_Tuple(){}
-
-	Item_Tuple(
-			Integer id,
-			Integer im_id,
-			Varchar<24> name,
-			Numeric<5, 2> price,
-			Varchar<50> data
-	):
-			i_id(id),
-			i_im_id(im_id), i_name(name), i_price(price),
-			i_data(data){ }
-};
-
-struct Stock_Tuple {
-	Integer s_i_id, s_w_id; //Pkey
-	Numeric<4, 0> s_quantity;
-	Char<24> s_dist_01, s_dist_02, s_dist_03, s_dist_04, s_dist_05, s_dist_06,
-			s_dist_07, s_dist_08, s_dist_09, s_dist_10;
-	Numeric<8, 0> s_ytd;
-	Numeric<4, 0> s_order_cnt, s_remote_cnt;
-	Varchar<50> s_data;
-
-	Stock_Tuple(){}
-
-	Stock_Tuple(
-			Integer i_id,
-			Integer w_id,
-			Numeric<4, 0> quantity,
-			Char<24> dist_01, Char<24> dist_02, Char<24> dist_03, Char<24> dist_04,
-			Char<24> dist_05, Char<24> dist_06, Char<24> dist_07, Char<24> dist_08,
-			Char<24> dist_09, Char<24> dist_10,
-			Numeric<8, 0> ytd,
-			Numeric<4, 0> order_cnt,
-			Numeric<4, 0> remote_cnt,
-			Varchar<50> data
-	):
-		s_i_id(i_id), s_w_id(w_id),
-		s_quantity(quantity), s_dist_01(dist_01), s_dist_02(dist_02), s_dist_03(dist_03),
-		s_dist_04(dist_04),s_dist_05(dist_05), s_dist_06(dist_06),
-		s_dist_07(dist_07), s_dist_08(dist_08),s_dist_09(dist_09), s_dist_10(dist_10),
-		s_ytd(ytd), s_order_cnt(order_cnt), s_remote_cnt(remote_cnt), s_data(data){ }
-};
 /*-----------------------------------------------------------------------------------------------------------------------*/
 
 
