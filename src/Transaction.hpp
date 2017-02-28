@@ -122,7 +122,10 @@ struct Transaction{
 	vector<Version*> ReadSet;
 
 	vector<pair<Warehouse_PK*,Integer>> ScanSet_Warehouse;
+	vector<pair<District_PK*,tup_2Int>> ScanSet_District;
+	vector<pair<Customer_PK*,tup_3Int>> ScanSet_Customer;
 	vector<pair<OrderLine_PK*,tup_4Int>> ScanSet_OrderLine;
+
 	/*
 	 * first: old version
 	 * second: new version

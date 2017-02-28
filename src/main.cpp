@@ -27,12 +27,10 @@ void run(int i){
 }
 
 int main(int argc, char* argv[]) {
-	warehouse = *(new Warehouse("warehouse"));
+//	warehouse = *(new Warehouse("warehouse"));
 	for(auto &w : warehouse.pk_index){
 		cout << w.second.begin << " " << w.second.end << " | " << w.second.w_id <<"\t" << w.second.w_street_1 << "\n";
 	}
-
-//	run(3);
 
 //	for(int i=0; i<2; ++i){
 //		run(i);
@@ -41,12 +39,15 @@ int main(int argc, char* argv[]) {
 //	thread T1(run,1);
 //	thread T2(run,2);
 
-	thread T1(run,2);
-	std::this_thread::sleep_for(std::chrono::milliseconds(2500));
-	thread T2(run,1);
 
-	T1.join();
-	T2.join();
+
+
+//	thread T1(run,2);
+//	std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+//	thread T2(run,1);
+//
+//	T1.join();
+//	T2.join();
 }
 
 

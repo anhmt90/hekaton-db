@@ -220,26 +220,45 @@ Version* Transaction::read(string tableName, Predicate pred, bool from_update){
 
 		//start the scan
 		for(auto it = range.first; it != range.second; ++it){
-			// the scanned version
-//			Warehouse_Tuple V = new Warehouse_Tuple(this->Tid);
-			Warehouse::Tuple* V = &(it->second);
-			//check predicate
-			if(V->w_id != pkey)
-				continue;
-			else {
-				int res = checkVisibility(*V);
-				while(res == -1){
-					res = checkVisibility(*V);
-				}
-				if(res == 1){
-					// adding V to ReadSet
-					if(!from_update)
-						this->ReadSet.push_back(V);
-					return V;
-				}
-				else
-					continue;
+			// V is the scanned version
+			Version* V = &(it->second);
+
+			int res = checkVisibility(*V);
+			while(res == -1){
+				res = checkVisibility(*V);
 			}
+			if(res == 1){
+				// adding V to ReadSet
+				if(!from_update)
+					this->ReadSet.push_back(V);
+				return V;
+			}
+			else
+				continue;
+		}
+	}
+	else if(tableName == "district"){
+		auto pkey = pred.pk_2int;
+		ScanSet_District.push_back(make_pair(&district.pk_index, pkey));
+		auto range = district.pk_index.equal_range(pkey);
+
+		//start the scan
+		for(auto it = range.first; it != range.second; ++it){
+			// V is the scanned version
+			Version* V = &(it->second);
+
+			int res = checkVisibility(*V);
+			while(res == -1){
+				res = checkVisibility(*V);
+			}
+			if(res == 1){
+				// adding V to ReadSet
+				if(!from_update)
+					this->ReadSet.push_back(V);
+				return V;
+			}
+			else
+				continue;
 		}
 	}
 	else if(tableName == "orderline"){
@@ -247,27 +266,23 @@ Version* Transaction::read(string tableName, Predicate pred, bool from_update){
 		ScanSet_OrderLine.push_back(make_pair(&orderline.pk_index, pkey));
 		auto range = orderline.pk_index.equal_range(pred.pk_4int);
 
+		//start the scan
 		for(auto it = range.first; it != range.second; ++it){
-			// the scanned version
-			OrderLine::Tuple* V = &(it->second);
-			//check predicate
-			if(make_tuple(V->ol_o_id, V->ol_d_id, V->ol_w_id, V->ol_number) != pkey)
-				continue;
-			else {
-				int res = checkVisibility(*V);
-				while(res == -1){
-					res = checkVisibility(*V);
-				}
-				if(res == 1){
-					// adding V to ReadSet
-					this->ReadSet.push_back(V);
-					return V;
-				}
-				else
-					continue;
+			// V is the scanned version
+			Version* V = &(it->second);
+
+			int res = checkVisibility(*V);
+			while(res == -1){
+				res = checkVisibility(*V);
 			}
-
-
+			if(res == 1){
+				// adding V to ReadSet
+				if(!from_update)
+					this->ReadSet.push_back(V);
+				return V;
+			}
+			else
+				continue;
 		}
 	}
 	return nullptr;
@@ -514,16 +529,10 @@ void Transaction::execute(int i){
 //	}
 //	Timestamp datetime = 0;
 	/***************************************************************************************************/
-	/*
-	 * update district
-	 * set d_next_o_id=o_id+1
-	 * where d_w_id=w_id and district.d_id=d_id;
-	 */
 
 	/*
 	 * Begin the NORMAL PROCESSING PHASE
 	 */
-//	Warehouse_Tuple* VN = dynamic_cast<Warehouse_Tuple*>(update("warehouse", Predicate((Integer) 4), false));
 	if(i==1){
 		Warehouse::Tuple* V = dynamic_cast<Warehouse::Tuple*>(read("warehouse", Predicate(Integer(1)), false));
 		this->begin;
@@ -630,8 +639,9 @@ void Transaction::execute(int i){
 	/*
 	 * End of NORMAL PROCESSING PHASE
 	 */
-	if(this->state != State::Aborted)
+	if(this->state != State::Aborted){
 		precommit();
+	}
 
 	/*
 	 * Begin of PREPARATION PHASE
