@@ -15,15 +15,22 @@ using namespace std;
 void newOrderRandom(Timestamp);
 
 /****************************************************************************/
+
+// counter to generate the Transactions ID
 atomic<uint64_t> GMI_tid{1ull<<63};
+
+uint64_t getTid(){
+	return ++GMI_tid;
+}
 
 unordered_map<uint64_t,Transaction*> TransactionManager;
 
 vector<Transaction*> GarbageTransactions;
 
-uint64_t getTid(){
-	return ++GMI_tid;
-}
+
+
+
+
 
 /****************************************************************************/
 void Transaction::decreaseCommitDepCounter(){
@@ -76,7 +83,6 @@ int Transaction::checkVisibility(Version& V){
 					return 0;
 				}
 			}
-
 			else if(TB->state == Transaction::State::Preparing && TS != NOT_SET){
 				if(TS < this->begin && V.end == INF){
 					//SPECULATIVELY read V
@@ -88,7 +94,6 @@ int Transaction::checkVisibility(Version& V){
 				else
 					return 0;
 			}
-
 			else if(TB->state == Transaction::State::Committed && TS != NOT_SET){
 				if(TS < RT && RT < V.end){
 					// just read V
@@ -97,13 +102,11 @@ int Transaction::checkVisibility(Version& V){
 				else
 					return 0;
 			}
-
 			else if(TB->state == Transaction::State::Aborted){
 				// ignore V; it's a garbage version
 				// here, we can let the garbage collector point to V
 				return 0;
 			}
-
 		} catch (out_of_range& oor){
 			/*
 			 * TB is terminated or not found
@@ -165,9 +168,7 @@ int Transaction::checkVisibility(Version& V){
 			return -1;
 		}
 	}
-
 	return 1;
-
 }
 
 /****************************************************************************/
@@ -211,6 +212,12 @@ int Transaction::checkUpdatibility(Version& V){
 }
 
 /****************************************************************************/
+// WRITE TEMPLATE FOR RANGE HERE
+
+
+
+
+
 Version* Transaction::read(string tableName, Predicate pred, bool from_update){
 	if(tableName == "warehouse"){
 		auto pkey = pred.pk_int;
@@ -220,26 +227,44 @@ Version* Transaction::read(string tableName, Predicate pred, bool from_update){
 
 		//start the scan
 		for(auto it = range.first; it != range.second; ++it){
-			// the scanned version
-//			Warehouse_Tuple V = new Warehouse_Tuple(this->Tid);
-			Warehouse::Tuple* V = &(it->second);
-			//check predicate
-			if(V->w_id != pkey)
-				continue;
-			else {
-				int res = checkVisibility(*V);
-				while(res == -1){
-					res = checkVisibility(*V);
-				}
-				if(res == 1){
-					// adding V to ReadSet
-					if(!from_update)
-						this->ReadSet.push_back(V);
-					return V;
-				}
-				else
-					continue;
+			// V is the scanned version
+			Version* V = &(it->second);
+
+			int res = checkVisibility(*V);
+			while(res == -1){
+				res = checkVisibility(*V);
 			}
+			if(res == 1){
+				// adding V to ReadSet
+				if(!from_update)
+					this->ReadSet.push_back(V);
+				return V;
+			}
+			else
+				continue;
+		}
+	}
+	else if(tableName == "district"){
+		ScanSet_District.push_back(make_pair(&district.pk_index, pred.pk_2int));
+		auto range = district.pk_index.equal_range(pred.pk_2int);
+
+		//start the scan
+		for(auto it = range.first; it != range.second; ++it){
+			// V is the scanned version
+			Version* V = &(it->second);
+
+			int res = checkVisibility(*V);
+			while(res == -1){
+				res = checkVisibility(*V);
+			}
+			if(res == 1){
+				// adding V to ReadSet
+				if(!from_update)
+					this->ReadSet.push_back(V);
+				return V;
+			}
+			else
+				continue;
 		}
 	}
 	else if(tableName == "orderline"){
@@ -247,38 +272,29 @@ Version* Transaction::read(string tableName, Predicate pred, bool from_update){
 		ScanSet_OrderLine.push_back(make_pair(&orderline.pk_index, pkey));
 		auto range = orderline.pk_index.equal_range(pred.pk_4int);
 
+		//start the scan
 		for(auto it = range.first; it != range.second; ++it){
-			// the scanned version
-			OrderLine::Tuple* V = &(it->second);
-			//check predicate
-			if(make_tuple(V->ol_o_id, V->ol_d_id, V->ol_w_id, V->ol_number) != pkey)
-				continue;
-			else {
-				int res = checkVisibility(*V);
-				while(res == -1){
-					res = checkVisibility(*V);
-				}
-				if(res == 1){
-					// adding V to ReadSet
-					this->ReadSet.push_back(V);
-					return V;
-				}
-				else
-					continue;
+			// V is the scanned version
+			Version* V = &(it->second);
+
+			int res = checkVisibility(*V);
+			while(res == -1){
+				res = checkVisibility(*V);
 			}
-
-
+			if(res == 1){
+				// adding V to ReadSet
+				if(!from_update)
+					this->ReadSet.push_back(V);
+				return V;
+			}
+			else
+				continue;
 		}
 	}
 	return nullptr;
 }
 
 /****************************************************************************/
-/*
- * update district
- * set d_next_o_id=o_id+1
- * where d_w_id=w_id and district.d_id=d_id;
- */
 /*
  * @param:
  * 		del : delete (true = delete, false = update)
@@ -446,6 +462,50 @@ void Transaction::abort(int code){
 	this->state = State::Aborted;
 	this->AbortNow = true;
 	this->CODE = code;
+
+	if(code<=-7 && code >=-12){
+		for(auto& pair : this->WriteSet){
+			// for the old version
+			/*
+			 * another transaction may already have detected the abort,
+			 * created another new version and reset the End field of the
+			 * old version. If so, TA leaves the End field value unchanged.
+			 */
+			if(pair.first && pair.first->end == this->Tid){
+				pair.first->end = INF;
+			}
+			// for the new version
+			if(pair.second){
+				pair.second->begin = INF;
+				pair.second->isGarbage = true;
+			}
+			//for delete operation
+			else {
+				continue;
+			}
+		}
+
+		// all commit dependent Transactions also have to abort
+		for(auto& t : CommitDepSet){
+			try{
+				auto TD = TransactionManager.at(t);
+				// -19: cascaded abort code
+				TD->abort(-19);
+			} catch(out_of_range& oor){
+				// the dependent Transaction does not exist or is terminated
+				continue;
+			}
+		}
+		cout << "Tid = " << (this->Tid - (1ull<<63)) << ", Code = " << (this->CODE) << ", begin = " << begin << ", end = " << end << "\n";
+
+		warehouse.pk_index.begin();
+		GarbageTransactions.push_back(this);
+		TransactionManager.erase(this->Tid);
+
+		std::terminate();
+	}
+
+
 }
 
 void Transaction::commit(){
@@ -497,22 +557,22 @@ void Transaction::execute(int i){
 	 * Randomize the input
 	 */
 
-//	int32_t w_id=urand(1,warehouses);
-//	int32_t d_id=urand(1,10);
-//	int32_t c_id=nurand(1023,1,3000);
-//	int32_t ol_cnt=urand(5,15);
-//
-//	int32_t supware[15];
-//	int32_t itemid[15];
-//	int32_t qty[15];
-//	for (int32_t i=0; i<ol_cnt; i++) {
-//		if (urand(1,100)>1)
-//			supware[i]=w_id; else
-//				supware[i]=urandexcept(1,warehouses,w_id);
-//		itemid[i]=nurand(8191,1,100000);
-//		qty[i]=urand(1,10);
-//	}
-//	Timestamp datetime = 0;
+	int32_t w_id=urand(1,warehouses);
+	int32_t d_id=urand(1,10);
+	int32_t c_id=nurand(1023,1,3000);
+	int32_t ol_cnt=urand(5,15);
+
+	int32_t supware[15];
+	int32_t itemid[15];
+	int32_t qty[15];
+	for (int32_t i=0; i<ol_cnt; i++) {
+		if (urand(1,100)>1)
+			supware[i]=w_id; else
+				supware[i]=urandexcept(1,warehouses,w_id);
+		itemid[i]=nurand(8191,1,100000);
+		qty[i]=urand(1,10);
+	}
+	Timestamp datetime = 0;
 	/***************************************************************************************************/
 	/*
 	 * update district
@@ -524,7 +584,27 @@ void Transaction::execute(int i){
 	 * Begin the NORMAL PROCESSING PHASE
 	 */
 //	Warehouse_Tuple* VN = dynamic_cast<Warehouse_Tuple*>(update("warehouse", Predicate((Integer) 4), false));
-	if(i==1){
+	if(i==-1){
+		Warehouse::Tuple* V = dynamic_cast<Warehouse::Tuple*>(read("warehouse", Predicate(Integer(w_id)), false));
+		if(!V){
+			if(this->CommitDepCounter == 0)
+				abort(-9);
+			else
+				abort(-8);
+		}
+
+		auto w_tax = V->w_tax;
+
+	}
+
+
+
+
+
+
+
+
+	else if(i==1){
 		Warehouse::Tuple* V = dynamic_cast<Warehouse::Tuple*>(read("warehouse", Predicate(Integer(1)), false));
 		this->begin;
 		if(!V){
@@ -638,11 +718,11 @@ void Transaction::execute(int i){
 	 */
 
 	//Testing cascaded abort and commit dependencies
-	if((this->Tid - (1ull<<63)) == 1){
-		cout << "Transaction " << (this->Tid - (1ull<<63))  << " sleeps for 300s... \n";
-		std::this_thread::sleep_for(std::chrono::seconds(300));
-//		abort(-100);
-	}
+//	if((this->Tid - (1ull<<63)) == 1){
+//		cout << "Transaction " << (this->Tid - (1ull<<63))  << " sleeps for 300s... \n";
+//		std::this_thread::sleep_for(std::chrono::seconds(300));
+////		abort(-100);
+//	}
 
 	/*
 	 * VALIDATION
@@ -756,8 +836,6 @@ void Transaction::execute(int i){
 	GarbageTransactions.push_back(this);
 	TransactionManager.erase(this->Tid);
 }
-
-
 
 
 

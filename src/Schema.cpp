@@ -23,15 +23,23 @@
 
 Warehouse warehouse;
 OrderLine orderline;
+District district;
+Customer customer;
+NewOrder neworder;
+Order order;
+Item item;
+Stock stock;
 
 
-
+//Global, monotonically increasing counter
 atomic<uint64_t> GMI_cnt{0};
-const uint64_t INF = ~(1ull<<63);
-
+//get Timestampe from GMI_cnt and increase it by 1
 uint64_t getTimestamp(){
 	return ++GMI_cnt;
 }
+
+// represents the infinity
+const uint64_t INF = ~(1ull<<63);
 /*----------------------------------------Supporting functions-----------------------------------------------------------*/
 void close_ifstream(ifstream& itbl) {
 	itbl.close();
@@ -97,12 +105,7 @@ TPCC::~TPCC() { }
 //	}
 //}
 /*-----------------------------------------------------------------------------------------------------------------------*/
-//void TPCC::District_Insert(tup_2Int tup, District_Tuple &row) {
-//	if(district_ix.insert(make_pair(tup, district.size())).second)
-//		district.push_back(row);
-//}
-//
-//
+
 //void TPCC::District_Import(ifstream& itbl) {
 //	string line;
 //	if (itbl.is_open()) {
@@ -452,7 +455,7 @@ void Warehouse::import(){
 				vector<string> elm = split(line);
 				Warehouse::Tuple row = *(new Warehouse::Tuple(getTimestamp()));
 				row.w_id = row.w_id.castString(elm[0].c_str(), elm[0].length());
-				string anh = to_string(1);
+//				string anh = to_string(1);
 
 				row.w_name = row.w_name.castString(elm[1].c_str(), elm[1].length());
 				row.w_street_1 = row.w_street_1.castString(elm[2].c_str(), elm[2].length());
@@ -486,7 +489,142 @@ void Warehouse::import(){
 //	pk_index.i
 //}
 
+void District::import() {
+	ifstream itbl("tbl/tpcc_district.tbl");
+	if (!itbl) {
+		// Print an error and exit
+		cerr << "tpcc_district.tbl could not be opened! :(" << endl;
+		exit(1);
 
+	} else {
+		string line;
+		if (itbl.is_open()) {
+			while (getline(itbl, line)) {
+				vector<string> elm = split(line);
+				District::Tuple row;
+				row.d_id = row.d_id.castString(elm[0].c_str(), elm[0].length());
+				row.d_w_id = row.d_w_id.castString(elm[1].c_str(), elm[1].length());
+				auto tup = make_tuple(row.d_id, row.d_w_id);
+
+				row.d_name = row.d_name.castString(elm[2].c_str(), elm[2].length());
+				row.d_street_1 = row.d_street_1.castString(elm[3].c_str(), elm[3].length());
+				row.d_street_2 = row.d_street_2.castString(elm[4].c_str(),elm[4].length());
+				row.d_city = row.d_city.castString(elm[5].c_str(), elm[5].length());
+				row.d_state = row.d_state.castString(elm[6].c_str(), elm[6].length());
+				row.d_zip = row.d_zip.castString(elm[7].c_str(), elm[7].length());
+				row.d_tax = row.d_tax.castString(elm[8].c_str(), elm[8].length());
+				row.d_ytd = row.d_ytd.castString(elm[9].c_str(), elm[9].length());
+				row.d_next_o_id = row.d_next_o_id.castString(elm[10].c_str(), elm[10].length());
+
+				row.setEnd(INF);
+				pk_index.insert(make_pair(tup, row));
+			}
+			tables.back().attributes.push_back(Attribute("d_id","Integer","district"));
+			tables.back().attributes.push_back(Attribute("d_w_id","Integer","district"));
+			tables.back().attributes.push_back(Attribute("d_name","Varchar<10>","district"));
+			tables.back().attributes.push_back(Attribute("d_street_1","Varchar<20>","district"));
+			tables.back().attributes.push_back(Attribute("d_street_2","Varchar<20>","district"));
+			tables.back().attributes.push_back(Attribute("d_city","Varchar<20>","district"));
+			tables.back().attributes.push_back(Attribute("d_state","Char<2>","district"));
+			tables.back().attributes.push_back(Attribute("d_zip","Char<9>","district"));
+			tables.back().attributes.push_back(Attribute("d_tax","Numeric<4,4>","district"));
+			tables.back().attributes.push_back(Attribute("d_ytd","Numeric<12,2>","district"));
+			tables.back().attributes.push_back(Attribute("d_next_o_id","Integer","district"));
+		}
+		close_ifstream(itbl);
+		tables.back().size = pk_index.size();
+		cout << "District imported!\n";
+
+	}
+}
+
+void Customer::import(){
+	ifstream itbl("tbl/tpcc_customer.tbl");
+	if (!itbl) {
+		// Print an error and exit
+		cerr << "tpcc_customer.tbl could not be opened! :(" << endl;
+		exit(1);
+
+	} else {
+		string line;
+		if (itbl.is_open()) {
+			while (getline(itbl, line)) {
+				vector<string> elm = split(line);
+				Customer::Tuple row;
+				row.c_id = row.c_id.castString(elm[0].c_str(), elm[0].length());
+				row.c_d_id = row.c_d_id.castString(elm[1].c_str(), elm[1].length());
+				row.c_w_id = row.c_w_id.castString(elm[2].c_str(), elm[2].length());
+				auto tup = make_tuple(row.c_id, row.c_d_id, row.c_w_id);
+
+				row.c_first = row.c_first.castString(elm[3].c_str(), elm[3].length());
+				row.c_middle = row.c_middle.castString(elm[4].c_str(), elm[4].length());
+				row.c_last = row.c_last.castString(elm[5].c_str(), elm[5].length());
+				row.c_street_1 = row.c_street_1.castString(elm[6].c_str(), elm[6].length());
+				row.c_street_2 = row.c_street_2.castString(elm[7].c_str(), elm[7].length());
+				row.c_city = row.c_city.castString(elm[8].c_str(), elm[8].length());
+				row.c_state = row.c_state.castString(elm[9].c_str(), elm[9].length());
+				row.c_zip = row.c_zip.castString(elm[10].c_str(), elm[10].length());
+				row.c_phone = row.c_phone.castString(elm[11].c_str(), elm[11].length());
+				row.c_since = row.c_since.castString(elm[12].c_str(), elm[12].length());
+				row.c_credit = row.c_credit.castString(elm[13].c_str(), elm[13].length());
+				row.c_credit_lim = row.c_credit_lim.castString(elm[14].c_str(), elm[14].length());
+				row.c_discount = row.c_discount.castString(elm[15].c_str(), elm[15].length());
+				row.c_balance = row.c_balance.castString(elm[16].c_str(), elm[16].length());
+				row.c_ytd_payment = row.c_ytd_payment.castString(elm[17].c_str(), elm[17].length());
+				row.c_payment_cnt = row.c_payment_cnt.castString(elm[18].c_str(), elm[18].length());
+				row.c_delivery_cnt = row.c_delivery_cnt.castString(elm[19].c_str(), elm[19].length());
+				row.c_data = row.c_data.castString(elm[20].c_str(), elm[20].length());
+				row.setEnd(INF);
+				pk_index.insert(make_pair(tup, row));
+			}
+			tables.back().attributes.push_back(Attribute("c_id","Integer","customer"));
+			tables.back().attributes.push_back(Attribute("c_d_id","Integer","customer"));
+			tables.back().attributes.push_back(Attribute("c_w_id","Integer","customer"));
+			tables.back().attributes.push_back(Attribute("c_first","Varchar<16>","customer"));
+			tables.back().attributes.push_back(Attribute("c_middle","Char<2>","customer"));
+			tables.back().attributes.push_back(Attribute("c_last","Varchar<16>","customer"));
+			tables.back().attributes.push_back(Attribute("c_street_1","Varchar<20>","customer"));
+			tables.back().attributes.push_back(Attribute("c_street_2","Varchar<20>","customer"));
+			tables.back().attributes.push_back(Attribute("c_city","Varchar<20>","customer"));
+			tables.back().attributes.push_back(Attribute("c_state","Char<2>","customer"));
+			tables.back().attributes.push_back(Attribute("c_zip","Char<9>","customer"));
+			tables.back().attributes.push_back(Attribute("c_phone","Char<16>","customer"));
+			tables.back().attributes.push_back(Attribute("c_since","Timestamp","customer"));
+			tables.back().attributes.push_back(Attribute("c_credit","Char<2>","customer"));
+			tables.back().attributes.push_back(Attribute("c_credit_lim","Numeric<12,2>","customer"));
+			tables.back().attributes.push_back(Attribute("c_discount","Numeric<4,4>","customer"));
+			tables.back().attributes.push_back(Attribute("c_balance","Numeric<12,2>","customer"));
+			tables.back().attributes.push_back(Attribute("c_ytd_payment","Numeric<12,2>","customer"));
+			tables.back().attributes.push_back(Attribute("c_payment_cnt","Numeric<4,0>","customer"));
+			tables.back().attributes.push_back(Attribute("c_delivery_cnt","Numeric<4,0>","customer"));
+			tables.back().attributes.push_back(Attribute("c_data","Varchar<500","customer"));
+		}
+		close_ifstream(itbl);
+		tables.back().size = pk_index.size();
+		cout << "Customer imported!\n";
+
+	}
+}
+
+void History::import(){
+
+}
+
+void NewOrder::import(){
+
+}
+
+void Order::import(){
+
+}
+
+void Item::import(){
+
+}
+
+void Stock::import(){
+
+}
 
 
 void OrderLine::import(){
@@ -497,6 +635,7 @@ void OrderLine::import(){
 		exit(1);
 	} else {
 		string line;
+		auto start=high_resolution_clock::now();
 		if (itbl.is_open()) {
 			while (getline(itbl, line)) {
 				vector<string> elm = split(line);
@@ -528,9 +667,10 @@ void OrderLine::import(){
 			tables.back().attributes.push_back(Attribute("ol_amount","Numeric<6,2>","orderline"));
 			tables.back().attributes.push_back(Attribute("ol_dist_info","Char<24>","orderline"));
 		}
+		auto end = duration_cast<duration<double>>(high_resolution_clock::now()-start).count();
 		close_ifstream(itbl);
 		tables.back().size = pk_index.size();
-		cout << "OrderLine imported!\n";
+		cout << "OrderLine imported! in " << end <<"s\n";
 	}
 }
 
