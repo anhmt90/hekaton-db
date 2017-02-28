@@ -13,7 +13,6 @@
  *
  */
 
-
 #ifndef SRC_TRANSACTION_HPP_
 #define SRC_TRANSACTION_HPP_
 
@@ -26,8 +25,8 @@
 #include "Schema.hpp"
 
 using namespace std;
-typedef unordered_multimap<Integer, Warehouse::Tuple> Warehouse_PK;
-typedef unordered_multimap<tup_4Int, OrderLine::Tuple> OrderLine_PK;
+
+
 /****************************************************************************/
 struct Transaction;
 
@@ -125,13 +124,19 @@ struct Transaction{
 	vector<pair<District_PK*,tup_2Int>> ScanSet_District;
 	vector<pair<Customer_PK*,tup_3Int>> ScanSet_Customer;
 	vector<pair<OrderLine_PK*,tup_4Int>> ScanSet_OrderLine;
+<<<<<<< HEAD
 
+=======
+	vector<pair<District_PK*,tup_2Int>> ScanSet_District;
+>>>>>>> presentation
 	/*
 	 * first: old version
 	 * second: new version
 	 * if second  = nullptr, then it is a delete
+	 * if first = nullptr, then it is a insert
 	 */
 	vector<pair<Version*, Version*>> WriteSet;
+
 
 	Transaction(int i):Tid(getTid()),begin(getTimestamp()), end(1ull<<63), state(State::Active){
 		TransactionManager.insert(make_pair(Tid, this));
@@ -140,33 +145,22 @@ struct Transaction{
 
 	~Transaction(){ };
 
-//	void setState(State state){
-//		this->state = state;
-//	}
 	void decreaseCommitDepCounter();
 
-	int checkVisibility(Version&);
-	int checkUpdatibility(Version&);
+	int checkVisibility(Version& V);
+	int checkUpdatibility(Version& V);
 
 	void execute(int);
 
-	Version* read(string, Predicate, bool);
-	Version* update(string, Predicate, bool);
+	Version* read(string tableName, Predicate pred, bool from_update);
+	Version* update(string tableName, Predicate pred, bool del);
 	Version* insert(string tableName, Version* VI, Predicate pred);
 
+	int validate();
 	void precommit();
-	void abort(int);
+	void abort(int code);
 	void commit();
 
-	int validate();
-
-
 };
-
-
-//struct TransactionManager{
-//	unordered_map<uint64_t, Transaction> transactions;
-//};
-
 
 #endif /* SRC_TRANSACTION_HPP_ */

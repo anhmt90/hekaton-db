@@ -27,10 +27,17 @@ void run(int i){
 }
 
 int main(int argc, char* argv[]) {
+<<<<<<< HEAD
 //	warehouse = *(new Warehouse("warehouse"));
 	for(auto &w : warehouse.pk_index){
 		cout << w.second.begin << " " << w.second.end << " | " << w.second.w_id <<"\t" << w.second.w_street_1 << "\n";
 	}
+=======
+//	warehouse = *(new Warehouse());
+//	for(auto &w : warehouse.pk_index){
+//		cout << w.second.begin << " " << w.second.end << " | " << w.second.w_id <<"\t" << w.second.w_street_1 << "\n";
+//	}
+>>>>>>> presentation
 
 //	for(int i=0; i<2; ++i){
 //		run(i);
@@ -39,6 +46,7 @@ int main(int argc, char* argv[]) {
 //	thread T1(run,1);
 //	thread T2(run,2);
 
+<<<<<<< HEAD
 
 
 
@@ -48,6 +56,33 @@ int main(int argc, char* argv[]) {
 //
 //	T1.join();
 //	T2.join();
+=======
+//	thread T1(run,2);
+//	std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+//	thread T2(run,1);
+//
+//	T1.join();
+//	T2.join();
+
+
+
+//	orderline = *(new OrderLine());
+//	district = *(new District());
+//	uint64_t c = 0;
+//	cout << "OrderLine: " << orderline.pk_index.size() << " tuples\n\n";
+//	auto start=high_resolution_clock::now();
+//
+//	for(size_t i = 0; i<1000t; i++){
+//		for(auto V : orderline.pk_index){
+//			++c;
+//		}
+//	}
+//	auto end = duration_cast<duration<double>>(high_resolution_clock::now()-start).count();
+//	cout << "Scanned " << c << " records in " << end << "s\n";
+//	cout << "Speed: " << c/(double)end << " lookups/s\n";
+
+	Transaction* T = new Transaction(1);
+>>>>>>> presentation
 }
 
 
