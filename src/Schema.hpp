@@ -358,7 +358,7 @@ struct NewOrder : public Table{
 	NewOrder(){
 		this->name = "neworder";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~NewOrder(){};
 	void import();
@@ -402,7 +402,7 @@ struct Order : public Table{
 	Order(){
 		this->name = "order";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~Order(){};
 	void import();
@@ -449,7 +449,7 @@ struct OrderLine : public Table{
 	OrderLine(){
 		this->name = "orderline";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~OrderLine(){};
 	void import();

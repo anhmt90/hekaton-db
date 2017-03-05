@@ -1,32 +1,13 @@
 #include "Schema.hpp"
 #include "Attribute.hpp"
 
-//#include <fstream>
-//#include <sstream>
-//#include <iostream>
-//#include <string>
-//#include <tuple>
-//#include <unordered_map>
-//#include <map>
-//#include <utility>
-//#include <vector>
-
-//unordered_map<Integer, Warehouse_Tuple> warehouse;
-//	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
-//	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
-//	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
-//	unordered_map<tuple<Integer, Integer, Integer>, Order_Tuple> order;
-//	unordered_map<tuple<Integer, Integer, Integer, Integer>, OrderLine_Version> orderline;
-//	unordered_map<Integer, Item_Tuple> item;
-//	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
-
 
 Warehouse warehouse;
-OrderLine orderline;
 District district;
 Customer customer;
 NewOrder neworder;
 Order order;
+OrderLine orderline;
 Item item;
 Stock stock;
 
@@ -92,59 +73,6 @@ TPCC::~TPCC() { }
 
 //
 ///*-----------------------------------------------------------------------------------------------------------------------*/
-
-//
-//inline void TPCC::Stock_Import(ifstream& itbl) {
-//	string line;
-//	if (itbl.is_open()) {
-//		while (getline(itbl, line)) {
-//			vector<string> elm = split(line);
-//			Stock_Tuple row;
-//			row.s_i_id = row.s_i_id.castString(elm[0].c_str(), elm[0].length());
-//			row.s_w_id = row.s_w_id.castString(elm[1].c_str(), elm[1].length());
-//
-//			auto tup = make_tuple(row.s_i_id, row.s_w_id);
-//			row.s_quantity = row.s_quantity.castString(elm[2].c_str(), elm[2].length());
-//			row.s_dist_01 = row.s_dist_01.castString(elm[3].c_str(), elm[3].length());
-//			row.s_dist_02 = row.s_dist_02.castString(elm[4].c_str(), elm[4].length());
-//			row.s_dist_03 = row.s_dist_03.castString(elm[5].c_str(), elm[5].length());
-//			row.s_dist_04 = row.s_dist_04.castString(elm[6].c_str(), elm[6].length());
-//			row.s_dist_05 = row.s_dist_05.castString(elm[7].c_str(), elm[7].length());
-//			row.s_dist_06 = row.s_dist_06.castString(elm[8].c_str(), elm[8].length());
-//			row.s_dist_07 = row.s_dist_07.castString(elm[9].c_str(), elm[9].length());
-//			row.s_dist_08 = row.s_dist_08.castString(elm[10].c_str(),elm[10].length());
-//			row.s_dist_09 = row.s_dist_09.castString(elm[11].c_str(),elm[11].length());
-//			row.s_dist_10 = row.s_dist_10.castString(elm[12].c_str(),elm[12].length());
-//
-//			row.s_ytd = row.s_ytd.castString(elm[13].c_str(),elm[13].length());
-//			row.s_order_cnt = row.s_order_cnt.castString(elm[14].c_str(),elm[14].length());
-//			row.s_remote_cnt = row.s_remote_cnt.castString(elm[15].c_str(),elm[15].length());
-//			row.s_data = row.s_data.castString(elm[16].c_str(),elm[16].length());
-//
-//			stock.push_back(row);
-//			stock_ix.insert(make_pair(tup, stock.size()-1));
-//		}
-//		tables.back().attributes.push_back(Attribute("s_i_id","Integer","stock"));
-//		tables.back().attributes.push_back(Attribute("s_w_id","Integer","stock"));
-//		tables.back().attributes.push_back(Attribute("s_quantity","Numeric<4,0>","stock"));
-//
-//		tables.back().attributes.push_back(Attribute("s_dist_01","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_02","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_03","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_04","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_05","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_06","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_07","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_08","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_09","Char<24>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_dist_10","Char<24>","stock"));
-//
-//		tables.back().attributes.push_back(Attribute("s_ytd","Numeric<8,0>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_order_cnt","Numeric<4,0>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_remote_cnt","Numeric<4,0>","stock"));
-//		tables.back().attributes.push_back(Attribute("s_data","Varchar<50>","stock"));
-//	}
-//}
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
 //std::ostream& operator<<(std::ostream& out,const w_Tuple& value);
@@ -212,9 +140,6 @@ void Warehouse::import(){
 	}
 }
 
-//template<typename Tup, typename... Args > inline pair<Tup*, bool> insert(Tup t, Args... a){
-//	pk_index.i
-//}
 
 
 void District::import() {
@@ -421,6 +346,7 @@ void Order::import(){
 }
 
 
+
 void OrderLine::import(){
 	ifstream itbl("tbl/tpcc_orderline.tbl");
 	if (!itbl) {
@@ -429,7 +355,6 @@ void OrderLine::import(){
 		exit(1);
 	} else {
 		string line;
-		auto start=high_resolution_clock::now();
 		if (itbl.is_open()) {
 			while (getline(itbl, line)) {
 				vector<string> elm = split(line);
@@ -461,37 +386,14 @@ void OrderLine::import(){
 			tables.back().attributes.push_back(Attribute("ol_amount","Numeric<6,2>","orderline"));
 			tables.back().attributes.push_back(Attribute("ol_dist_info","Char<24>","orderline"));
 		}
-		auto end = duration_cast<duration<double>>(high_resolution_clock::now()-start).count();
 		close_ifstream(itbl);
 		tables.back().size = pk_index.size();
-		cout << "OrderLine imported! in " << end <<"s\n";
+		cout << "OrderLine imported!\n";
 	}
 }
 
 
-//void TPCC::Item_Import(ifstream& itbl) {
-//	string line;
-//	if (itbl.is_open()) {
-//		while (getline(itbl, line)) {
-//			vector<string> elm = split(line);
-//			Item_Tuple row;
-//			row.i_id = row.i_id.castString(elm[0].c_str(), elm[0].length());
-//
-//			row.i_im_id = row.i_im_id.castString(elm[1].c_str(), elm[1].length());
-//			row.i_name = row.i_name.castString(elm[2].c_str(), elm[2].length());
-//			row.i_price = row.i_price.castString(elm[3].c_str(), elm[3].length());
-//			row.i_data = row.i_data.castString(elm[4].c_str(), elm[4].length());
-//
-//			item.push_back(row);
-//			item_ix.insert(make_pair(row.i_id, item.size()-1));
-//		}
-//		tables.back().attributes.push_back(Attribute("i_id","Integer","item"));
-//		tables.back().attributes.push_back(Attribute("i_im_id","Integer","item"));
-//		tables.back().attributes.push_back(Attribute("i_name","Varchar<24>","item"));
-//		tables.back().attributes.push_back(Attribute("i_price","Numeric<5,2>","item"));
-//		tables.back().attributes.push_back(Attribute("i_data","Varchar<50>","item"));
-//	}
-//}
+
 void Item::import(){
 	ifstream itbl("tbl/tpcc_item.tbl");
 	if (!itbl) {
@@ -527,6 +429,8 @@ void Item::import(){
 		cout << "Item imported!\n";
 	}
 }
+
+
 
 void Stock::import(){
 
@@ -590,9 +494,6 @@ void Stock::import(){
 		cout << "Stock imported!\n";
 	}
 }
-
-
-
 
 void _import(){
 

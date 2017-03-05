@@ -119,7 +119,13 @@ int Transaction::checkVisibility(Version& V){
 			 * TB is terminated or not found
 			 * reread V's Begin field and try again
 			 */
-			return -1;
+			if(V.isGarbage)
+				return 0;
+			else {
+				cout << "Invalid version!\n";
+				throw;
+			}
+
 		}
 	}
 
@@ -180,7 +186,12 @@ int Transaction::checkVisibility(Version& V){
 			 * TE is terminated or not found
 			 * reread the End field and try again
 			 */
-			return -1;
+			if(V.isGarbage)
+				return 0;
+			else {
+				cout << "Invalid version!\n";
+				throw;
+			}
 		}
 	}
 	return 1;
@@ -374,18 +385,18 @@ Version* Transaction::update(string tableName, Predicate pred, bool del){
 
 			// create a new version
 			if(tableName == "warehouse"){
-				Warehouse::Tuple* VN = dynamic_cast<Warehouse::Tuple*>(V);
+				Warehouse::Tuple* VN = new Warehouse::Tuple();
+				*VN = *(dynamic_cast<Warehouse::Tuple*>(V));
 				VN->setTime(Tid, INF);
-				// add the new version into the primary index
 				VN = &(warehouse.pk_index.insert(make_pair(pred.pk_int, *VN))->second);
-				// add to WriteSet
 				WriteSet.push_back(make_pair(V,VN));
 				return VN;
 
 			}
 
 			else if (tableName == "stock"){
-				Stock::Tuple* VN = dynamic_cast<Stock::Tuple*>(V);
+				Stock::Tuple* VN = new Stock::Tuple();
+				*VN = *(dynamic_cast<Stock::Tuple*>(V));
 				VN->setTime(Tid, INF);
 				VN = &(stock.pk_index.insert(make_pair(pred.pk_2int, *VN))->second);
 				WriteSet.push_back(make_pair(V,VN));
@@ -699,13 +710,9 @@ void Transaction::execute(int i){
 					all_local = 0;
 			}
 
-			_order_version = dynamic_cast<Order::Tuple*>(insert("order", new Order::Tuple(o_id, d_id, w_id, c_id, datetime, 0, items, all_local), Predicate(o_id, d_id, w_id)));
-			if(!_order_version) {abort(-12); break;} // version not insertable
-			_neworder_version = dynamic_cast<NewOrder::Tuple*>(insert("neworder", new NewOrder::Tuple(o_id, d_id, w_id), Predicate(o_id, d_id, w_id)));
-			if(!_neworder_version) {abort(-12); break;} // version not insertable
-
 
 			for(int index = 0; index < items; ++index){
+
 				_item_version = dynamic_cast<Item::Tuple*>(read("item", Predicate(itemid[index]), false));
 				if(!_item_version) {abort(-9); break;}	// version not found
 				auto i_price = _item_version->i_price;
@@ -763,6 +770,11 @@ void Transaction::execute(int i){
 				if(!_orderline_version) {abort(-12); break;} // version not insertable
 
 			}
+
+			_order_version = dynamic_cast<Order::Tuple*>(insert("order", new Order::Tuple(o_id, d_id, w_id, c_id, datetime, 0, items, all_local), Predicate(o_id, d_id, w_id)));
+			if(!_order_version) {abort(-12); break;} // version not insertable
+			_neworder_version = dynamic_cast<NewOrder::Tuple*>(insert("neworder", new NewOrder::Tuple(o_id, d_id, w_id), Predicate(o_id, d_id, w_id)));
+			if(!_neworder_version) {abort(-12); break;} // version not insertable
 
 			break;
 		}
@@ -871,10 +883,13 @@ void Transaction::execute(int i){
 	/*
 	 * End of NORMAL PROCESSING PHASE
 	 */
-	if(!AbortNow)
-		precommit();
-	else
-		abort(-19);
+	if(state==State::Active){
+		if(!AbortNow)
+			precommit();
+		else
+			abort(-19);
+	}
+
 
 	/*
 	 * Begin of PREPARATION PHASE
@@ -890,25 +905,27 @@ void Transaction::execute(int i){
 	/*
 	 * VALIDATION
 	 */
-	int valid = 0;
-	if(!AbortNow){
-		valid = validate();
-		if( valid > 0 && !AbortNow){
-			// the Transaction must wait here for commit dependencies if there are any
-			while(CommitDepCounter!=0 && !(AbortNow)){
-				cout << "Transaction " << (Tid - (1ull<<63))  << " is waiting for CommitDep... \n";
-				std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	if(state==State::Preparing){
+		int valid = 0;
+		if(!AbortNow){
+			valid = validate();
+			if( valid > 0 && !AbortNow){
+				// the Transaction must wait here for commit dependencies if there are any
+				while(CommitDepCounter!=0 && !(AbortNow)){
+					cout << "Transaction " << (Tid - (1ull<<63))  << " is waiting for CommitDep... \n";
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
+				}
+				//only allowed to commit if AbortNow not set and there is no CommitDep left
+				if(!AbortNow && CommitDepCounter == 0){
+					commit();
+				}
 			}
-			//only allowed to commit if AbortNow not set and there is no CommitDep left
-			if(!AbortNow && CommitDepCounter == 0){
-				commit();
-			}
+			else
+				abort(valid);
 		}
-		else
-			abort(valid);
-	}
-	else {
-		abort(-19);
+		else {
+			abort(-19);
+		}
 	}
 	/*
 	 * POSTPROCESSING PHASE

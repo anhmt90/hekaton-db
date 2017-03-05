@@ -64,10 +64,11 @@ int main(int argc, char* argv[]) {
 //	auto end = duration_cast<duration<double>>(high_resolution_clock::now()-start).count();
 //	cout << "Scanned " << c << " records in " << end << "s\n";
 //	cout << "Speed: " << c/(double)end << " lookups/s\n";
+	uint32_t iteration = 1000;
 	auto start=high_resolution_clock::now();
-	for(int i = 0; i < 1000000; ++i)
+	for(int i = 0; i < iteration; ++i)
 		Transaction* T = new Transaction(-1);
-	cout << "finished in " << duration_cast<duration<double>>(high_resolution_clock::now()-start).count() << "s" << endl;
+	cout << "finished newOrder transaction " << iteration << " times in " << duration_cast<duration<double>>(high_resolution_clock::now()-start).count() << "s" << endl;
 }
 
 
