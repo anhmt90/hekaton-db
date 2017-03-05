@@ -7,7 +7,7 @@
 /*
  * Abort CODE:
  * 				1 = commit succeeds
- * 				-1 = Vissibility validation failed
+ * 				-1 = Visibility validation failed
  * 				-2 = Phantom validation failed
  * 				-19 = cascaded abort by commit dependency
  *
@@ -52,6 +52,7 @@ public:
 };
 
 
+
 struct Predicate {
 	Integer pk_int;
 	tup_2Int pk_2int;
@@ -62,19 +63,23 @@ struct Predicate {
 
 	}
 
-	Predicate(tup_2Int pk_2int) : pk_2int(pk_2int){
+	Predicate(Integer key1, Integer key2):pk_2int(make_tuple(key1, key2)){
+	}
+
+	Predicate(Integer key1, Integer key2, Integer key3) : pk_3int(make_tuple(key1, key2, key3)){
 
 	}
 
-	Predicate(tup_3Int pk_3int) : pk_3int(pk_3int){
-
-	}
-
-	Predicate(tup_4Int pk_4int) : pk_4int(pk_4int){
+	Predicate(Integer key1, Integer key2, Integer key3, Integer key4) : pk_4int(make_tuple(key1, key2, key3, key4)){
 
 	}
 
 	~Predicate(){ };
+
+	template<typename H, typename... T> void toString(H head, T... tail){
+		cout << head << ", ";
+		toString(tail...);
+	}
 };
 
 
@@ -121,8 +126,13 @@ struct Transaction{
 	vector<Version*> ReadSet;
 
 	vector<pair<Warehouse_PK*,Integer>> ScanSet_Warehouse;
-	vector<pair<OrderLine_PK*,tup_4Int>> ScanSet_OrderLine;
 	vector<pair<District_PK*,tup_2Int>> ScanSet_District;
+	vector<pair<Customer_PK*,tup_3Int>> ScanSet_Customer;
+	vector<pair<NewOrder_PK*,tup_3Int>> ScanSet_NewOrder;
+	vector<pair<Order_PK*,tup_3Int>> ScanSet_Order;
+	vector<pair<OrderLine_PK*,tup_4Int>> ScanSet_OrderLine;
+	vector<pair<Item_PK*,Integer>> ScanSet_Item;
+	vector<pair<Stock_PK*,tup_2Int>> ScanSet_Stock;
 	/*
 	 * first: old version
 	 * second: new version
@@ -132,14 +142,12 @@ struct Transaction{
 	vector<pair<Version*, Version*>> WriteSet;
 
 
-	Transaction(int i):Tid(getTid()),begin(getTimestamp()), end(1ull<<63), state(State::Active){
+	Transaction(int i) : Tid(getTid()),begin(getTimestamp()), end(NOT_SET), state(State::Active){
 		TransactionManager.insert(make_pair(Tid, this));
 		execute(i);
 	}
 
 	~Transaction(){ };
-
-	void decreaseCommitDepCounter();
 
 	int checkVisibility(Version& V);
 	int checkUpdatibility(Version& V);
@@ -155,6 +163,9 @@ struct Transaction{
 	void abort(int code);
 	void commit();
 
+	//not so important function
+	bool readable(Version* V, bool from_update); //for the sake of more concise code
+	void decreaseCommitDepCounter();
 };
 
 #endif /* SRC_TRANSACTION_HPP_ */

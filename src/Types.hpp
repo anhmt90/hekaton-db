@@ -5,6 +5,7 @@
 #include <cstring>
 #include <ostream>
 #include <cassert>
+#include <cmath>
 //---------------------------------------------------------------------------
 // HyPer
 // (c) Thomas Neumann 2010
@@ -295,6 +296,9 @@ public:
    /// Get the value
    long getRaw() const { return value; }
 
+   /// Get the value as double number
+   double getDouble() const { return (double)value/(pow(10,precision)); }
+
    /// Hash
    inline uint64_t hash() const;
 
@@ -328,7 +332,23 @@ public:
    /// Div
    template <unsigned l> Numeric<len,precision> operator/(const Numeric<l,4>& n) const { Numeric r; r.value=value*10000/n.value; return r; }
    /// Mul
-   Numeric<len,precision+precision> operator*(const Numeric<len,precision>& n) const { Numeric<len,precision+precision> r; r.value=value*n.value; return r; }
+   Numeric<len,precision+precision> operator*(const Numeric<len,precision>& n) const {
+	   Numeric<len,precision+precision> r;
+	   r.value=value*n.value;
+	   return r;
+   }
+//   /// Mul improved
+//   double operator*(const Numeric<len,precision>& n) const {
+//	   double r;
+//	   r = (double)value/(pow(10,precision)) * (double)value/(pow(10,precision));
+//	   return r;
+//   }
+//
+//   double operator*(const double& n) const {
+//	   double r;
+//	   r = (double)value/(pow(10,precision)) * n;
+//	   return r;
+//   }
    /// Neg
    Numeric operator-() { Numeric n; n.value=-value; return n; }
 
@@ -341,7 +361,11 @@ public:
    /// Cast
    template <unsigned l> Numeric<l,precision-1> castM1() const { Numeric<l,precision-1> r; r.value=value/10; return r; }
    /// Cast
-   template <unsigned l> Numeric<l,precision-2> castM2() const { Numeric<l,precision-2> r; r.value=value/100; return r; }
+   template <unsigned l>
+   Numeric<l,precision-2> castM2() const {
+	   Numeric<l,precision-2> r;
+	   r.value=value/100; return r;
+   }
 
    /// Build a number
    static Numeric<len,precision> buildRaw(long v) { Numeric r; r.value=v; return r; }

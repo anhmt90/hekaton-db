@@ -129,15 +129,19 @@ struct Version {
 
 	virtual void vf(){ };
 
-	void setBegin(uint64_t begin){
-		this->begin = begin;
-	}
+	void setBegin(uint64_t begin){this->begin = begin;}
 
-	void setEnd(uint64_t end){
+	void setEnd(uint64_t end){this->end = end;}
+
+	void setTime(uint64_t begin, uint64_t end){
+		this->begin = begin;
 		this->end = end;
 	}
 
-	Version(){ }
+	Version(){
+		begin = INF; //NOT_SET
+		end = INF; //NOT_SET
+	}
 	virtual ~Version(){ };
 };
 
@@ -152,9 +156,6 @@ struct Warehouse : public Table{
 		Numeric<12, 2> w_ytd;
 
 		Tuple(){ };
-		Tuple(uint64_t begin){
-			this->begin = begin;
-		}
 
 		Tuple(
 				Integer id,
@@ -353,9 +354,9 @@ struct NewOrder : public Table{
 
 	unordered_multimap<tup_3Int, NewOrder::Tuple> pk_index;
 
-	NewOrder(){};
-	NewOrder(string name){
-		this->name = name;
+
+	NewOrder(){
+		this->name = "neworder";
 		tables.push_back(*this);
 		import();
 	}
@@ -398,16 +399,14 @@ struct Order : public Table{
 
 	unordered_multimap<tup_3Int, Order::Tuple> pk_index;
 
-	Order(){};
-	Order(string name){
-		this->name = name;
+	Order(){
+		this->name = "order";
 		tables.push_back(*this);
 		import();
 	}
 	virtual ~Order(){};
 	void import();
 };
-
 
 
 
@@ -422,9 +421,7 @@ struct OrderLine : public Table{
 		Numeric<6, 2> ol_amount;
 		Char<24> ol_dist_info;
 
-		Tuple(uint64_t begin){
-			this->begin = begin;
-		}
+		Tuple(){}
 
 		Tuple(
 				Integer o_id,
@@ -458,6 +455,9 @@ struct OrderLine : public Table{
 	void import();
 };
 
+
+
+
 struct Item : public Table{
 	struct Tuple : public Version {
 		Integer i_id;	//Pkey
@@ -466,9 +466,7 @@ struct Item : public Table{
 		Numeric<5, 2> i_price;
 		Varchar<50> i_data;
 
-
 		Tuple(){}
-
 		Tuple(
 				Integer id,
 				Integer im_id,
@@ -482,9 +480,8 @@ struct Item : public Table{
 	};
 	unordered_multimap<Integer, Item::Tuple> pk_index;
 
-	Item(){};
-	Item(string name){
-		this->name = name;
+	Item(){
+		this->name = "item";
 		tables.push_back(*this);
 		import();
 	}
@@ -492,6 +489,8 @@ struct Item : public Table{
 	void import();
 
 };
+
+
 
 struct Stock : public Table{
 	struct Tuple : public Version{
@@ -526,9 +525,8 @@ struct Stock : public Table{
 
 	unordered_multimap<tup_2Int, Stock::Tuple> pk_index;
 
-	Stock(){};
-	Stock(string name){
-		this->name = name;
+	Stock(){
+		this->name = "stock";
 		tables.push_back(*this);
 		import();
 	}
@@ -558,9 +556,6 @@ typedef unordered_multimap<tup_3Int, Order::Tuple> Order_PK;
 typedef unordered_multimap<tup_4Int, OrderLine::Tuple> OrderLine_PK;
 typedef unordered_multimap<Integer, Item::Tuple> Item_PK;
 typedef unordered_multimap<tup_2Int, Stock::Tuple> Stock_PK;
-
-
-
 
 
 
