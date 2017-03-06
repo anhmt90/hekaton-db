@@ -261,7 +261,7 @@ Version* Transaction::read(string tableName, Predicate pred, bool _not_select){
 		auto pkey = pred.pk_int;
 		//register the scan into ScanSet
 		ScanSet_Warehouse.push_back(make_pair(&warehouse.pk_index, pkey));
-		auto range = warehouse.pk_index.equal_range(pred.pk_int);
+		auto range = warehouse.pk_index.equal_range(pkey);
 		//start the scan
 		for(auto it = range.first; it != range.second; ++it){
 			// V is the scanned version
@@ -315,7 +315,7 @@ Version* Transaction::read(string tableName, Predicate pred, bool _not_select){
 	else if(tableName == "orderline"){
 		auto pkey = pred.pk_4int;
 		ScanSet_OrderLine.push_back(make_pair(&orderline.pk_index, pkey));
-		auto range = orderline.pk_index.equal_range(pred.pk_4int);
+		auto range = orderline.pk_index.equal_range(pkey);
 		for(auto it = range.first; it != range.second; ++it){
 			Version* V = &(it->second);
 			if(readable(V,_not_select))
@@ -326,7 +326,7 @@ Version* Transaction::read(string tableName, Predicate pred, bool _not_select){
 	else if(tableName == "item"){
 		auto pkey = pred.pk_int;
 		ScanSet_Item.push_back(make_pair(&item.pk_index, pkey));
-		auto range = item.pk_index.equal_range(pred.pk_int);
+		auto range = item.pk_index.equal_range(pkey);
 		for(auto it = range.first; it != range.second; ++it){
 			Version* V = &(it->second);
 			if(readable(V,_not_select))
@@ -337,7 +337,7 @@ Version* Transaction::read(string tableName, Predicate pred, bool _not_select){
 	else if(tableName == "stock"){
 		auto pkey = pred.pk_2int;
 		ScanSet_Stock.push_back(make_pair(&stock.pk_index, pkey));
-		auto range = stock.pk_index.equal_range(pred.pk_2int);
+		auto range = stock.pk_index.equal_range(pkey);
 		for(auto it = range.first; it != range.second; ++it){
 			Version* V = &(it->second);
 			if(readable(V,_not_select))
@@ -400,8 +400,9 @@ Version* Transaction::update(string tableName, Predicate pred){
 		// V can be updated
 		else if (updatable == 1){
 			if( (V->end & 1ull<<63) == 0){ // there is no T-id in V's End field
-				// set V's End field to Tid
-				V->end = Tid;
+				if(V->begin != Tid) // if V's begin == Tid, then T is updating a new version
+					// set V's End field to Tid
+					V->end = Tid;
 			} else{
 				// T must abort if there is another Transaction has sneaked into V
 				return nullptr;
@@ -491,9 +492,7 @@ int Transaction::validate(){
 	 *
 	 * @return: -1 visibility validation failed
 	 */
-
 	for(auto v : ReadSet){
-		//if(v->end < INF  && v->end < end)
 		if(checkVisibility(*v) != 1)
 		{
 			return -1;
@@ -573,7 +572,7 @@ void Transaction::abort(int code){
 				continue;
 			}
 		}
-		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
+//		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
 
 		GarbageTransactions.push_back(this);
 		TransactionManager.erase(Tid);
@@ -625,12 +624,8 @@ int32_t nurand(int32_t A,int32_t x,int32_t y) {
 
 /*****************************************************************************/
 
-void Transaction::execute(int i){
-	/***************************************************************************************************/
-	/*
-	 * Randomize the input
-	 */
-
+void Transaction::execute(int z){
+	/*-----------------------------------------Randomize the inputs-------------------------------------------------*/
 	int32_t w_id=urand(1,warehouses);
 	int32_t d_id=urand(1,10);
 	int32_t c_id=nurand(1023,1,3000);
@@ -650,6 +645,7 @@ void Transaction::execute(int i){
 		qty[i]=urand(1,10);
 	}
 	Timestamp datetime = 0;
+	/*------------------------------------------Execute the transaction newOrder-------------------------------------*/
 
 	/*
 	 * Begin the NORMAL PROCESSING PHASE
@@ -689,7 +685,6 @@ void Transaction::execute(int i){
 				all_local = 0;
 		}
 
-
 		for(int index = 0; index < items; ++index){
 
 			_item_version = dynamic_cast<Item::Tuple*>(read("item", Predicate(itemid[index]), false));
@@ -716,27 +711,30 @@ void Transaction::execute(int i){
 			case 9 : s_dist = _stock_version->s_dist_09; break;
 			case 10 : s_dist = _stock_version->s_dist_10; break;
 			}
+			if(s_i_id == 16330 && s_w_id == 2)
+				s_w_id = 2;
 
 			if(s_quantity > qty[index]){
 				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, s_w_id)));
-				if(!_stock_version) {abort(-10); break;}	// version cannot be updated
-				_stock_version->s_quantity = s_quantity - qty[index];
+//				if(!_stock_version) {abort(-10); break;}	// version cannot be updated
+				if(_stock_version)
+					_stock_version->s_quantity = s_quantity - qty[index];
 			}
 			else {
 				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, s_w_id)));
-				if(!_stock_version) {abort(-10); break;}	// version cannot be updated
-				_stock_version->s_quantity = s_quantity + 91 - qty[index];
+				if(_stock_version)
+					_stock_version->s_quantity = s_quantity + 91 - qty[index];
 			}
 
 			if(supware[index] != w_id){
 				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, w_id)));
-				if(!_stock_version) {abort(-10); break;}	// version cannot be updated
-				_stock_version->s_remote_cnt = s_remote_cnt + 1;
+				if(_stock_version)
+					_stock_version->s_remote_cnt = s_remote_cnt + 1;
 			}
 			else{
 				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, w_id)));
-				if(!_stock_version) {abort(-10); break;}	// version cannot be updated
-				_stock_version->s_order_cnt = s_order_cnt + 1;
+				if(_stock_version)
+					_stock_version->s_order_cnt = s_order_cnt + 1;
 			}
 
 
@@ -751,15 +749,18 @@ void Transaction::execute(int i){
 		if(state == State::Aborted)
 			break;
 
+
 		_order_version = dynamic_cast<Order::Tuple*>(insert("order", new Order::Tuple(o_id, d_id, w_id, c_id, datetime, 0, items, all_local), Predicate(o_id, d_id, w_id)));
 		if(!_order_version) {abort(-12); break;} // version not insertable
 		_neworder_version = dynamic_cast<NewOrder::Tuple*>(insert("neworder", new NewOrder::Tuple(o_id, d_id, w_id), Predicate(o_id, d_id, w_id)));
 		if(!_neworder_version) {abort(-12); break;} // version not insertable
 
+
 		break;
 	}
 
-	/***************************************************************************************************/
+	/*------------------------------------------Begin the MVCC mechanism-----------------------------------------------*/
+
 	/*
 	 * End of NORMAL PROCESSING PHASE
 	 */
@@ -807,6 +808,7 @@ void Transaction::execute(int i){
 			abort(-19);
 		}
 	}
+
 	/*
 	 * POSTPROCESSING PHASE
 	 *
@@ -863,10 +865,6 @@ void Transaction::execute(int i){
 				pair.second->begin = INF;
 				pair.second->isGarbage = true;
 			}
-			//for deleting
-			else {
-				continue;
-			}
 		}
 
 		// all commit dependent Transactions also have to abort
@@ -884,8 +882,8 @@ void Transaction::execute(int i){
 	else
 		throw;
 
-	if(CODE > -9 || CODE <-12)
-		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
+//	if(CODE > -9 || CODE <-12)
+//		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
 
 	GarbageTransactions.push_back(this);
 	TransactionManager.erase(Tid);
@@ -893,31 +891,4 @@ void Transaction::execute(int i){
 	neworder.pk_index;
 	order.pk_index;
 	orderline.pk_index;
-}
-
-
-
-
-
-
-/*****************************************************************************************************************/
-
-void newOrderRandom(Timestamp now) {
-	int32_t w_id=urand(1,warehouses);
-	int32_t d_id=urand(1,10);
-	int32_t c_id=nurand(1023,1,3000);
-	int32_t ol_cnt=urand(5,15);
-
-	int32_t supware[15];
-	int32_t itemid[15];
-	int32_t qty[15];
-	for (int32_t i=0; i<ol_cnt; i++) {
-		if (urand(1,100)>1)
-			supware[i]=w_id; else
-				supware[i]=urandexcept(1,warehouses,w_id);
-		itemid[i]=nurand(8191,1,100000);
-		qty[i]=urand(1,10);
-	}
-
-//	newOrder(w_id,d_id,c_id,ol_cnt,supware,itemid,qty,now);
 }
