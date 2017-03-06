@@ -37,38 +37,19 @@ vector<string> split(const string &s) {
 	return splitted;
 }
 /*-----------------------------------------------------------------------------------------------------------------------*/
-extern "C" TPCC::TPCC(){
-	auto start=high_resolution_clock::now();
-	_import();
-//	_importIndex();
-	cout << "import " << duration_cast<duration<double>>(high_resolution_clock::now()-start).count() << "s" << endl;
-
-}
-
-TPCC::~TPCC() { }
+//extern "C" TPCC::TPCC(){
+//	auto start=high_resolution_clock::now();
+//	_import();
+////	_importIndex();
+//	cout << "import " << duration_cast<duration<double>>(high_resolution_clock::now()-start).count() << "s" << endl;
+//
+//}
 
 /*-----------------------------------------------------------------------------------------------------------------------*/
 
 ///*-----------------------------------------------------------------------------------------------------------------------*/
 
-//void TPCC::History_Import(ifstream& itbl) {
-//	string line;
-//	if (itbl.is_open()) {
-//		while (getline(itbl, line)) {
-//			vector<string> elm = split(line);
-//			History_Tuple row;
-//			row.h_c_id = row.h_c_id.castString(elm[0].c_str(), elm[0].length());
-//			row.h_c_d_id = row.h_c_d_id.castString(elm[1].c_str(), elm[1].length());
-//			row.h_c_w_id = row.h_c_w_id.castString(elm[2].c_str(), elm[2].length());
-//			row.h_d_id = row.h_d_id.castString(elm[3].c_str(), elm[3].length());
-//			row.h_w_id = row.h_w_id.castString(elm[4].c_str(), elm[4].length());
-//			row.h_date = row.h_date.castString(elm[5].c_str(), elm[5].length());
-//			row.h_amount = row.h_amount.castString(elm[6].c_str(), elm[6].length());
-//			row.h_data = row.h_data.castString(elm[7].c_str(), elm[7].length());
-//			history.push_back(row);
-//		}
-//
-//	}
+
 ///*-----------------------------------------------------------------------------------------------------------------------*/
 
 //
@@ -78,7 +59,7 @@ TPCC::~TPCC() { }
 //std::ostream& operator<<(std::ostream& out,const w_Tuple& value);
 //For the two indexes
 
-//void TPCC::_importIndex(){
+//void _importIndex(){
 //	unordered_multimap<tuple<Integer, Integer, Varchar<16>, Varchar<16>>, uint32_t> customer_wdl;
 //	for(uint32_t i = 0; i < customer.size(); i++){
 //		auto tup = make_tuple(customer[i].c_w_id, customer[i].c_d_id, customer[i].c_last, customer[i].c_first);
@@ -262,8 +243,38 @@ void Customer::import(){
 	}
 }
 
-void History::import(){
 
+
+void History::import(){
+	ifstream itbl("tbl/tpcc_history.tbl");
+	if (!itbl) {
+		// Print an error and exit
+		cerr << "tpcc_history.tbl could not be opened! :(" << endl;
+		exit(1);
+
+	} else {
+		string line;
+		if (itbl.is_open()) {
+			while (getline(itbl, line)) {
+				vector<string> elm = split(line);
+				History::Tuple row;
+				row.h_c_id = row.h_c_id.castString(elm[0].c_str(), elm[0].length());
+				row.h_c_d_id = row.h_c_d_id.castString(elm[1].c_str(), elm[1].length());
+				row.h_c_w_id = row.h_c_w_id.castString(elm[2].c_str(), elm[2].length());
+				row.h_d_id = row.h_d_id.castString(elm[3].c_str(), elm[3].length());
+				row.h_w_id = row.h_w_id.castString(elm[4].c_str(), elm[4].length());
+				row.h_date = row.h_date.castString(elm[5].c_str(), elm[5].length());
+				row.h_amount = row.h_amount.castString(elm[6].c_str(), elm[6].length());
+				row.h_data = row.h_data.castString(elm[7].c_str(), elm[7].length());
+
+				row.setTime(getTimestamp(), INF);
+//				pk_index.insert(make_pair(tup, row));
+			}
+		}
+		close_ifstream(itbl);
+//		tables.back().size = pk_index.size();
+		cout << "History imported!\n";
+	}
 }
 
 

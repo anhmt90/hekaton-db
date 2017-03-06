@@ -358,7 +358,7 @@ struct NewOrder : public Table{
 	NewOrder(){
 		this->name = "neworder";
 		tables.push_back(*this);
-//		import();
+		import();
 	}
 	virtual ~NewOrder(){};
 	void import();
@@ -402,12 +402,11 @@ struct Order : public Table{
 	Order(){
 		this->name = "order";
 		tables.push_back(*this);
-//		import();
+		import();
 	}
 	virtual ~Order(){};
 	void import();
 };
-
 
 
 
@@ -449,7 +448,7 @@ struct OrderLine : public Table{
 	OrderLine(){
 		this->name = "orderline";
 		tables.push_back(*this);
-//		import();
+		import();
 	}
 	virtual ~OrderLine(){};
 	void import();
@@ -535,11 +534,10 @@ struct Stock : public Table{
 };
 
 
-
-
 extern Warehouse warehouse;
 extern District district;
 extern Customer customer;
+extern History history;
 extern NewOrder neworder;
 extern Order order;
 extern OrderLine orderline;
@@ -558,83 +556,4 @@ typedef unordered_multimap<Integer, Item::Tuple> Item_PK;
 typedef unordered_multimap<tup_2Int, Stock::Tuple> Stock_PK;
 
 
-
-
-
-/*-----------------------------------------------------------------------------------------------------------------------*/
-
-
-
-/*
- * Primary key indexes of each table as unordered_map
- * with key part is the primary key and value part is
- * index-number on the vector of the table.
- */
-//extern Warehouse warehouse;
-//extern OrderLine orderline;
-//	unordered_map<tuple<Integer, Integer>, District_Tuple> district;
-//	unordered_map<tuple<Integer, Integer, Integer>, Customer_Tuple> customer;
-//	unordered_map<tuple<Integer, Integer, Integer>, NewOrder_Tuple> neworder;
-//	unordered_map<tuple<Integer, Integer, Integer>, Order_Tuple> order;
-//	unordered_map<tuple<Integer, Integer, Integer, Integer>, OrderLine_Version> orderline;
-//	unordered_map<Integer, Item_Tuple> item;
-//	unordered_map<tuple<Integer, Integer>, Stock_Tuple> stock;
-
-
-void _import();
-//inline void Warehouse_Import(ifstream& );
-//
-//inline void OrderLine_Import(ifstream&);
-
-struct TPCC {
-
-	TPCC();
-
-	~TPCC();
-
-//	void Warehouse_Insert(Integer , Warehouse_Tuple &);
-
-//	void Warehouse_Import(ifstream& );
-//	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	void District_Insert(tup_2Int, District_Tuple&);
-//
-//	void District_Import(ifstream&);
-//	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	void Customer_Insert(tup_3Int, Customer_Tuple&);
-//
-//	inline void Customer_Import(ifstream&);
-//	/*----------------------------------------------------------------------------------------------------------------------*/
-//	void History_Insert(History_Tuple&);
-//
-//	void History_Import(ifstream&);
-//	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	void NewOrder_Insert(tup_3Int, NewOrder_Tuple);
-//
-//	inline void NewOrder_Import(ifstream&);
-//	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	void Order_Insert(tup_3Int, Order_Tuple&);
-//
-//	inline void Order_Import(ifstream&);
-//	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	void OrderLine_Insert(tup_4Int, OrderLine_Tuple);
-//
-//	inline void OrderLine_Import(ifstream&);
-//	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	void Item_Insert(Integer, Item_Tuple&);
-//
-//	void Item_Import(ifstream&);
-//	/*-----------------------------------------------------------------------------------------------------------------------*/
-//	void Stock_Insert(tup_2Int, Stock_Tuple&);
-//
-//	void Stock_Import(ifstream&);
-
-	/*-----------------------------------------------------------------------------------------------------------------------*/
-	//std::ostream& operator<<(std::ostream& out,const w_Tuple& value);
-	//For the two indexes
-
-//	void _importIndex();
-//	void _import();
-
-
-};
 #endif

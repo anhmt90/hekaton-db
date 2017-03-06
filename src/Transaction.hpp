@@ -154,9 +154,10 @@ struct Transaction{
 
 	void execute(int);
 
-	Version* read(string tableName, Predicate pred, bool from_update);
-	Version* update(string tableName, Predicate pred, bool del);
+	Version* read(string tableName, Predicate pred, bool _not_select);
 	Version* insert(string tableName, Version* VI, Predicate pred);
+	Version* update(string tableName, Predicate pred);
+	Version* remove(string tableName, Predicate pred);
 
 	int validate();
 	void precommit();
