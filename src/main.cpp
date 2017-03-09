@@ -65,15 +65,11 @@ int main(int argc, char* argv[]) {
 //	cout << "Scanned " << c << " records in " << end << "s\n";
 //	cout << "Speed: " << c/(double)end << " lookups/s\n";
 	cout << endl;
-	cout << "Order Buckets: " << order.pk_index.bucket_count() << " buckets\n";
-	cout << "NewOrder Buckets: " << neworder.pk_index.bucket_count() << " buckets\n";
-	cout << "OrderLine Buckets: " << orderline.pk_index.bucket_count() << " buckets\n";
-
 	cout << "Order: " << order.pk_index.size() << " tuples\n";
 	cout << "NewOrder: " << neworder.pk_index.size() << " tuples\n";
 	cout << "OrderLine: " << orderline.pk_index.size() << " tuples\n";
 
-	size_t times = 1000000;
+	size_t times = 100000;
 	cout << "Executing "<< times<< " transactions ... \n";
 	auto start=high_resolution_clock::now();
 	for(int z = 0; z < times; ++z)

@@ -5,7 +5,7 @@
  *      Author: anhmt90
  */
 /*
- * Abort CODE:
+ * Exit CODE:
  * 				1 = commit succeeds
  * 				-1 = Visibility validation failed
  * 				-2 = Phantom validation failed
@@ -149,13 +149,13 @@ struct Transaction{
 
 	~Transaction(){ };
 
-	int checkVisibility(Version& V);
-	int checkUpdatibility(Version& V);
+	bool checkVisibility(Version& V);
+	bool checkUpdatibility(Version& V);
 
 	void execute(int);
 
 	Version* read(string tableName, Predicate pred, bool _not_select);
-	Version* insert(string tableName, Version* VI, Predicate pred);
+	Version* insert(string tableName, Predicate pred, Version* VI);
 	Version* update(string tableName, Predicate pred);
 	Version* remove(string tableName, Predicate pred);
 
@@ -165,8 +165,8 @@ struct Transaction{
 	void commit();
 
 	//not so important function
-	bool readable(Version* V, bool from_update); //for the sake of more concise code
-	void decreaseCommitDepCounter();
+	bool readable(Version* V, bool _not_select); //for the sake of more concise code
+	bool checkPhantom(Version* V); //for the sake of more concise code
 };
 
 #endif /* SRC_TRANSACTION_HPP_ */

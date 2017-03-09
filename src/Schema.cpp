@@ -18,7 +18,6 @@ atomic<uint64_t> GMI_cnt{0};
 uint64_t getTimestamp(){
 	return ++GMI_cnt;
 }
-
 // represents the infinity
 const uint64_t INF = ~(1ull<<63);
 /*----------------------------------------Supporting functions-----------------------------------------------------------*/
