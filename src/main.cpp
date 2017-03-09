@@ -21,7 +21,7 @@ using namespace std;
 #include "Schema.hpp"
 #include "Transaction.hpp"
 
-int main(int argc, char* argv[]) {
+int main() {
 	vector<size_t> loops = {10,100,500,1000};
 	for(size_t i = 0, size = loops.size(); i < size; ++i){
 		double total = orderline.pk_index.size() * loops[i];

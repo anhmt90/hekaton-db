@@ -735,8 +735,6 @@ void Transaction::execute(int z){
 	/*
 	 * Begin the NORMAL PROCESSING PHASE
 	 */
-	OrderLine::Tuple* _orderline_version;
-
 	/*
 	 * Use while(true) and breaks to stop the Transaction to run further because the statement cannot be
 	 * executed (e.g. try to read a non-existing/invisible version, insert with the duplicate primary key, ...).
@@ -745,7 +743,7 @@ void Transaction::execute(int z){
 	 * general cases with transactions having nested loops in it, we should use GOTO and LABEL instead.
 	 */
 
-	for(auto itr = orderline.pk_index.begin(); itr!=orderline.pk_index.end(); ++itr){
+	for(auto& ol : orderline.pk_index){
 	}
 	/*------------------------------------------Begin the MVCC mechanism-----------------------------------------------*/
 
