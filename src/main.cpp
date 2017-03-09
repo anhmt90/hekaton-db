@@ -26,7 +26,7 @@ void run(int i){
 	Transaction* T = new Transaction(i);
 }
 
-int main(int argc, char* argv[]) {
+int main() {
 //	warehouse = *(new Warehouse());
 //	for(auto &w : warehouse.pk_index){
 //		cout << w.second.begin << " " << w.second.end << " | " << w.second.w_id <<"\t" << w.second.w_street_1 << "\n";

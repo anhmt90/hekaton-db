@@ -677,8 +677,6 @@ void Transaction::abort(int code){
 				continue;
 			}
 		}
-//		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
-
 		GarbageTransactions.push_back(this);
 		TransactionManager.erase(Tid);
 	}
@@ -788,6 +786,12 @@ void Transaction::execute(int z){
 				all_local = 0;
 		}
 
+		_order_version = dynamic_cast<Order::Tuple*>(insert("order", Predicate(o_id, d_id, w_id), new Order::Tuple(o_id, d_id, w_id, c_id, datetime, 0, items, all_local)));
+		if(!_order_version) {abort(-12); break;} // version not insertable
+
+		_neworder_version = dynamic_cast<NewOrder::Tuple*>(insert("neworder", Predicate(o_id, d_id, w_id), new NewOrder::Tuple(o_id, d_id, w_id)));
+		if(!_neworder_version) {abort(-12); break;} // version not insertable
+
 		for(int index = 0; index < items; ++index){
 
 			_item_version = dynamic_cast<Item::Tuple*>(read("item", Predicate(itemid[index]), false));
@@ -850,14 +854,6 @@ void Transaction::execute(int z){
 		}
 		if(state == State::Aborted)
 			break;
-
-
-		_order_version = dynamic_cast<Order::Tuple*>(insert("order", Predicate(o_id, d_id, w_id), new Order::Tuple(o_id, d_id, w_id, c_id, datetime, 0, items, all_local)));
-		if(!_order_version) {abort(-12); break;} // version not insertable
-
-		_neworder_version = dynamic_cast<NewOrder::Tuple*>(insert("neworder", Predicate(o_id, d_id, w_id), new NewOrder::Tuple(o_id, d_id, w_id)));
-		if(!_neworder_version) {abort(-12); break;} // version not insertable
-
 
 		break;
 	}
@@ -985,8 +981,7 @@ void Transaction::execute(int z){
 	else
 		throw;
 
-//	if(CODE > -9 || CODE <-12)
-//		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
+//	cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
 
 	GarbageTransactions.push_back(this);
 	TransactionManager.erase(Tid);
