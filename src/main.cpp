@@ -69,10 +69,10 @@ int main(int argc, char* argv[]) {
 	cout << "NewOrder: " << neworder.pk_index.size() << " tuples\n";
 	cout << "OrderLine: " << orderline.pk_index.size() << " tuples\n";
 
-	size_t times = 100000;
+	size_t times = 1000000;
 	cout << "Executing "<< times<< " transactions ... \n";
 	auto start=high_resolution_clock::now();
-	for(int z = 0; z < times; ++z)
+	for(size_t z = 0; z < times; ++z)
 		Transaction* T = new Transaction(z);
 //	cout << "finished newOrder transaction " << iteration << " times in " << duration_cast<duration<double>>(high_resolution_clock::now()-start).count() << "s" << endl;
 

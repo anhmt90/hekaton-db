@@ -58,7 +58,8 @@ bool Transaction::checkVisibility(Version& V){
 	 * 2nd case: V's Begin field contains a transaction ID (of TB)
 	 */
 	else if ((V.begin & 1ull<<63) != 0){
-		try{
+		auto itr = TransactionManager.find(V.begin);
+		if( itr != TransactionManager.end()){
 			if(V.begin == T->Tid && V.end == INF){
 				// for updating a version several times by a same transaction OR
 				// for visibility validating a version that first was read (in ReadSet) and
@@ -67,7 +68,7 @@ bool Transaction::checkVisibility(Version& V){
 				// just read V
 				return 1;
 			}
-			auto TB = TransactionManager.at(V.begin);
+			auto TB = itr->second;
 			auto TS = TB->end;
 
 			if(TB->state == Transaction::State::Active && TS == NOT_SET){
@@ -103,7 +104,7 @@ bool Transaction::checkVisibility(Version& V){
 				// here, we can let the garbage collector point to V
 				return 0;
 			}
-		} catch (out_of_range& oor){
+		} else {
 			/*
 			 * TB is terminated or not found
 			 * reread V's Begin field and try again
@@ -123,16 +124,9 @@ bool Transaction::checkVisibility(Version& V){
 	 * 3rd case: version's End field contains a transaction ID (of TE)
 	 */
 	else if ((V.end & 1ull<<63) != 0){
-		try{
-//			if(V.begin < RT && V.end == T->Tid){
-//				// for updating a version several times by a same transaction OR
-//				// for visibility validating a version that first was read (in ReadSet) and
-//				// then was updated by the same transaction.
-//				// Because the updating set V's Begin field to the Tid
-//				// just read V
-//				return 1;
-//			}
-			auto TE = TransactionManager.at(V.end);
+		auto itr = TransactionManager.find(V.end);
+		if( itr != TransactionManager.end()){
+			auto TE = itr->second;
 			auto TS = TE->end;
 			if(TE->state == Transaction::State::Active && TS == NOT_SET){
 				if(TE->Tid == T->Tid) {
@@ -170,7 +164,7 @@ bool Transaction::checkVisibility(Version& V){
 				return 1;
 			}
 
-		} catch (out_of_range& oor){
+		} else {
 			/*
 			 * TE is terminated or not found
 			 * reread the End field and try again
@@ -197,8 +191,9 @@ bool Transaction::checkUpdatibility(Version& V){
 	}
 	// V.end contains a Tid
 	else {
-		try{
-			auto TE = TransactionManager.at(V.end);
+		auto itr = TransactionManager.find(V.end);
+		if( itr != TransactionManager.end()){
+			auto TE = itr->second;
 			if(TE->state == Transaction::State::Aborted)
 				return 1;
 			else if (TE->state == Transaction::State::Preparing && TE->end != NOT_SET){
@@ -216,7 +211,7 @@ bool Transaction::checkUpdatibility(Version& V){
 			}
 			else
 				return 0;
-		} catch (out_of_range& oor){
+		} else {
 			/*
 			 * TE is terminated or not found
 			 */
