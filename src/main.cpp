@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
 		cout << endl;
 		cout << "OrderLine: " << orderline.pk_index.size() << " tuples\n";
-		cout << "Looking up the table OrderLine " << loops[i] << " times ... \n";
+		cout << "Updating the table OrderLine " << loops[i] << " times ... \n";
 
 		auto start=high_resolution_clock::now();
 		for(size_t z = 0; z < loops[i]; ++z)
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 		auto end = duration_cast<duration<double>>(high_resolution_clock::now()-start).count();
 
 		cout << "Accomplished in " << end << "s\n";
-		cout << "Speed: " << total/(double)end << " lookups/s\n";
+		cout << "Speed: " << total/(double)end << " updates/sec\n";
 
 		cout << "OrderLine: " << orderline.pk_index.size() << " tuples\n\n";
 	}

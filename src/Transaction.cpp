@@ -676,7 +676,6 @@ void Transaction::abort(int code){
 				continue;
 			}
 		}
-//		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
 
 		GarbageTransactions.push_back(this);
 		TransactionManager.erase(Tid);
@@ -748,14 +747,15 @@ void Transaction::execute(int z){
 	 * general cases with transactions having nested loops in it, we should use GOTO and LABEL instead.
 	 */
 	for(int index = 0; index < items; ++index){
-		_orderline_version = dynamic_cast<OrderLine::Tuple*>(read("orderline", Predicate(o_id, d_id, w_id, index+1), false));
-		if(!_orderline_version) {abort(-9);break;}	// version not found
-		auto ol_amount = _orderline_version->ol_amount;
+		_orderline_version = dynamic_cast<OrderLine::Tuple*>(update("orderline", Predicate(o_id, d_id, w_id, index+1)));
+		if(_orderline_version) {
+			_orderline_version->ol_amount = _orderline_version->ol_amount / 1;
+		}
+
 	}
 
 
 	/*------------------------------------------Begin the MVCC mechanism-----------------------------------------------*/
-
 	/*
 	 * End of NORMAL PROCESSING PHASE
 	 */
@@ -765,7 +765,6 @@ void Transaction::execute(int z){
 		else
 			abort(-19);
 	}
-
 
 	/*
 	 * Begin of PREPARATION PHASE
@@ -877,8 +876,8 @@ void Transaction::execute(int z){
 	else
 		throw;
 
-//	if(CODE > -9 || CODE <-12)
-//		cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
+
+//	cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
 
 	GarbageTransactions.push_back(this);
 	TransactionManager.erase(Tid);
