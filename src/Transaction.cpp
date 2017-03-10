@@ -545,8 +545,8 @@ int Transaction::validate(){
 	 *
 	 * @return: -1 visibility validation failed
 	 */
-	for(auto v : ReadSet){
-		if(checkVisibility(*v) != 1)
+	for(auto& v : ReadSet){
+		if(v->end < end)
 		{
 			return -1;
 		}
@@ -727,38 +727,20 @@ int32_t nurand(int32_t A,int32_t x,int32_t y) {
 
 void Transaction::execute(int z){
 	/*-----------------------------------------Randomize the inputs-------------------------------------------------*/
-	int32_t w_id=urand(1,warehouses);
-	int32_t d_id=urand(1,10);
-	int32_t c_id=nurand(1023,1,3000);
-	int32_t ol_cnt=urand(5,15);
-
-	int32_t items = ol_cnt;
-
-	int32_t supware[15];
-	int32_t itemid[15];
-	int32_t qty[15];
-	for (int32_t i=0; i<ol_cnt; i++) {
-		if (urand(1,100)>1)
-			supware[i]=w_id;
-		else
-			supware[i]=urandexcept(1,warehouses,w_id);
-		itemid[i]=nurand(8191,1,100000);
-		qty[i]=urand(1,10);
-	}
-	Timestamp datetime = 0;
+	int32_t w_id = 4;
 	/*------------------------------------------Execute the transaction newOrder-------------------------------------*/
 
 	/*
 	 * Begin the NORMAL PROCESSING PHASE
 	 */
 	Warehouse::Tuple* _warehouse_version;
-	District::Tuple* _district_version;
-	Customer::Tuple* _customer_version;
-	NewOrder::Tuple* _neworder_version;
-	Order::Tuple* _order_version;
-	OrderLine::Tuple* _orderline_version;
-	Item::Tuple* _item_version;
-	Stock::Tuple* _stock_version;
+//	District::Tuple* _district_version;
+//	Customer::Tuple* _customer_version;
+//	NewOrder::Tuple* _neworder_version;
+//	Order::Tuple* _order_version;
+//	OrderLine::Tuple* _orderline_version;
+//	Item::Tuple* _item_version;
+//	Stock::Tuple* _stock_version;
 	/*
 	 * Use while(true) and breaks to stop the Transaction to run further because the statement cannot be
 	 * executed (e.g. try to read a non-existing/invisible version, insert with the duplicate primary key, ...).
@@ -767,94 +749,18 @@ void Transaction::execute(int z){
 	 * general cases with transactions having nested loops in it, we should use GOTO and LABEL instead.
 	 */
 	while(true){
-		_warehouse_version = dynamic_cast<Warehouse::Tuple*>(read("warehouse", Predicate(w_id), false));
-		if(!_warehouse_version) {abort(-9); break;}	// version not found
-		auto w_tax = _warehouse_version->w_tax;
+		if(z==1){ // transaction 1 executes this
+			_warehouse_version = dynamic_cast<Warehouse::Tuple*>(read("warehouse", Predicate(w_id), false));
+			if(!_warehouse_version) {abort(-9); break;}	// version not found
+			auto w_tax = _warehouse_version->w_tax;
 
-		_customer_version = dynamic_cast<Customer::Tuple*>(read("customer", Predicate(c_id, d_id, w_id), false));
-		if(!_customer_version) {abort(-9); break;}	// version not found
-		auto c_discount = _customer_version->c_discount;
-
-		_district_version = dynamic_cast<District::Tuple*>(read("district", Predicate(d_id, w_id), false));
-		if(!_district_version) {abort(-9); break;} // version not found
-		auto o_id = _district_version->d_next_o_id;
-		auto d_tax = _district_version->d_tax;
-
-		int32_t all_local = 1;
-		for(int index = 0; index < items; ++index){
-			if(w_id != supware[index])
-				all_local = 0;
+			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 		}
 
-		_order_version = dynamic_cast<Order::Tuple*>(insert("order", Predicate(o_id, d_id, w_id), new Order::Tuple(o_id, d_id, w_id, c_id, datetime, 0, items, all_local)));
-		if(!_order_version) {abort(-12); break;} // version not insertable
-
-		_neworder_version = dynamic_cast<NewOrder::Tuple*>(insert("neworder", Predicate(o_id, d_id, w_id), new NewOrder::Tuple(o_id, d_id, w_id)));
-		if(!_neworder_version) {abort(-12); break;} // version not insertable
-
-		for(int index = 0; index < items; ++index){
-
-			_item_version = dynamic_cast<Item::Tuple*>(read("item", Predicate(itemid[index]), false));
-			if(!_item_version) {abort(-9); break;}	// version not found
-			auto i_price = _item_version->i_price;
-
-			auto s_i_id = itemid[index];
-			auto s_w_id = supware[index];
-			_stock_version = dynamic_cast<Stock::Tuple*>(read("stock", Predicate(s_i_id, s_w_id), false));
-			if(!_stock_version) {abort(-9); break;}	// version cannot be updated
-			auto s_quantity = _stock_version->s_quantity;
-			auto s_remote_cnt = _stock_version->s_remote_cnt;
-			auto s_order_cnt = _stock_version->s_order_cnt;
-			Char<24> s_dist;
-			switch(d_id){
-			case 1 : s_dist = _stock_version->s_dist_01; break;
-			case 2 : s_dist = _stock_version->s_dist_02; break;
-			case 3 : s_dist = _stock_version->s_dist_03; break;
-			case 4 : s_dist = _stock_version->s_dist_04; break;
-			case 5 : s_dist = _stock_version->s_dist_05; break;
-			case 6 : s_dist = _stock_version->s_dist_06; break;
-			case 7 : s_dist = _stock_version->s_dist_07; break;
-			case 8 : s_dist = _stock_version->s_dist_08; break;
-			case 9 : s_dist = _stock_version->s_dist_09; break;
-			case 10 : s_dist = _stock_version->s_dist_10; break;
-			}
-			if(s_i_id == 16330 && s_w_id == 2)
-				s_w_id = 2;
-
-			if(s_quantity > qty[index]){
-				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, s_w_id)));
-//				if(!_stock_version) {abort(-10); break;}	// version cannot be updated
-				if(_stock_version)
-					_stock_version->s_quantity = s_quantity - qty[index];
-			}
-			else {
-				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, s_w_id)));
-				if(_stock_version)
-					_stock_version->s_quantity = s_quantity + 91 - qty[index];
-			}
-
-			if(supware[index] != w_id){
-				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, w_id)));
-				if(_stock_version)
-					_stock_version->s_remote_cnt = s_remote_cnt + 1;
-			}
-			else{
-				_stock_version = dynamic_cast<Stock::Tuple*>(update("stock",Predicate(s_i_id, w_id)));
-				if(_stock_version)
-					_stock_version->s_order_cnt = s_order_cnt + 1;
-			}
-
-
-			Numeric<6,2> ol_amount = qty[index] * i_price.getDouble() * (1 + w_tax.getDouble() + d_tax.getDouble()) * (1 - c_discount.getDouble());
-
-			_orderline_version = dynamic_cast<OrderLine::Tuple*>(insert("orderline", Predicate(o_id, d_id, w_id, index+1),
-					new OrderLine::Tuple(o_id, d_id, w_id, index+1, itemid[index], supware[index], 0, qty[index], ol_amount, s_dist)));
-			if(!_orderline_version) {abort(-12); break;} // version not insertable
-
+		else if (z==2) { // transaction 2 executes this
+			_warehouse_version = dynamic_cast<Warehouse::Tuple*>(remove("warehouse",Predicate(w_id)));
+			if(!_warehouse_version) {abort(-11); break;}
 		}
-		if(state == State::Aborted)
-			break;
-
 		break;
 	}
 
@@ -981,7 +887,7 @@ void Transaction::execute(int z){
 	else
 		throw;
 
-//	cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
+	cout << "Transaction " << (Tid - (1ull<<63)) << ", Code = " << (CODE) << ", begin = " << begin << ", end = " << end << "\n";
 
 	GarbageTransactions.push_back(this);
 	TransactionManager.erase(Tid);

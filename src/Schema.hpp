@@ -227,7 +227,7 @@ struct District : public Table{
 	District(){
 		this->name = "district";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~District(){};
 	void import();
@@ -293,7 +293,7 @@ struct Customer : public Table{
 	Customer(){
 		this->name = "customer";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~Customer(){};
 	void import();
@@ -329,7 +329,7 @@ struct History : public Table{
 	History(){
 		this->name = "history";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~History(){};
 	void import();
@@ -357,7 +357,7 @@ struct NewOrder : public Table{
 	NewOrder(){
 		this->name = "neworder";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~NewOrder(){};
 	void import();
@@ -401,7 +401,7 @@ struct Order : public Table{
 	Order(){
 		this->name = "order";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~Order(){};
 	void import();
@@ -447,7 +447,7 @@ struct OrderLine : public Table{
 	OrderLine(){
 		this->name = "orderline";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~OrderLine(){};
 	void import();
@@ -481,7 +481,7 @@ struct Item : public Table{
 	Item(){
 		this->name = "item";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~Item(){};
 	void import();
@@ -526,7 +526,7 @@ struct Stock : public Table{
 	Stock(){
 		this->name = "stock";
 		tables.push_back(*this);
-		import();
+//		import();
 	}
 	virtual ~Stock(){};
 	void import();
