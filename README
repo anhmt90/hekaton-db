@@ -1,0 +1,10 @@
+The semantic of the program is described in file 'writeup-dbimp.pdf'.
+
+The branch master contains the program executing the (original) transaction newOrder with single thread.
+The other branches are used for correctness and performance testing:
+	- Branch 'test-visibility-validation': test for read stability. 
+	- Branch 'test-phantom-avoidance': test for phantom detection.
+	- Branch 'test-cascaded-aborts: test for cascaded aborts in the context of commit dependencies.
+	- Branch 'test-scanning': test scan speed of the program by scanning the OrderLine table multiple times.
+	- Branch 'read-only': test performance of read-only transactions.
+	- Branch 'update-only': test performance of update-only transactions.
