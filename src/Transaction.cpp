@@ -545,8 +545,8 @@ int Transaction::validate(){
 	 *
 	 * @return: -1 visibility validation failed
 	 */
-	for(auto v : ReadSet){
-		if(checkVisibility(*v) != 1)
+	for(auto& v : ReadSet){
+		if(v->end < end)
 		{
 			return -1;
 		}
