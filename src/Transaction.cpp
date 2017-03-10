@@ -734,13 +734,7 @@ void Transaction::execute(int z){
 	 * Begin the NORMAL PROCESSING PHASE
 	 */
 	Warehouse::Tuple* _warehouse_version;
-//	District::Tuple* _district_version;
-//	Customer::Tuple* _customer_version;
-//	NewOrder::Tuple* _neworder_version;
-//	Order::Tuple* _order_version;
-//	OrderLine::Tuple* _orderline_version;
-//	Item::Tuple* _item_version;
-//	Stock::Tuple* _stock_version;
+
 	/*
 	 * Use while(true) and breaks to stop the Transaction to run further because the statement cannot be
 	 * executed (e.g. try to read a non-existing/invisible version, insert with the duplicate primary key, ...).
@@ -753,13 +747,12 @@ void Transaction::execute(int z){
 			_warehouse_version = dynamic_cast<Warehouse::Tuple*>(read("warehouse", Predicate(w_id), false));
 			if(!_warehouse_version) {abort(-9); break;}	// version not found
 			auto w_tax = _warehouse_version->w_tax;
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 		}
 
 		else if (z==2) { // transaction 2 executes this
-			_warehouse_version = dynamic_cast<Warehouse::Tuple*>(remove("warehouse",Predicate(w_id)));
-			if(!_warehouse_version) {abort(-11); break;}
+			_warehouse_version = dynamic_cast<Warehouse::Tuple*>(update("warehouse",Predicate(w_id)));
+			if(_warehouse_version)
+				_warehouse_version->w_ytd = _warehouse_version->w_ytd / 1;
 		}
 		break;
 	}
@@ -794,6 +787,7 @@ void Transaction::execute(int z){
 	if(state==State::Preparing){
 		int valid = 0;
 		if(!AbortNow){
+			if(z==1) std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 			valid = validate();
 			if( valid > 0 && !AbortNow){
 				// the Transaction must wait here for commit dependencies if there are any
