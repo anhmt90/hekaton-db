@@ -545,7 +545,7 @@ int Transaction::validate(){
 	 * @return: -1 visibility validation failed
 	 */
 	for(auto v : ReadSet){
-		if(checkVisibility(*v) != 1)
+		if(v->end < end)
 		{
 			return -1;
 		}
@@ -666,14 +666,14 @@ void Transaction::abort(int code){
 
 		// all commit dependent Transactions also have to abort
 		for(auto& t : CommitDepSet){
-			try{
+			auto itr = TransactionManager.find(t);
+			if( itr != TransactionManager.end()){
 				// TD: Dependent Transaction
-				auto TD = TransactionManager.at(t);
+				auto TD = itr->second;
 				// -19: cascaded abort code
 				TD->AbortNow = true;
-			} catch(out_of_range& oor){
-				// the dependent Transaction does not exist or is terminated
-				continue;
+			} else {
+				throw;
 			}
 		}
 
@@ -786,7 +786,7 @@ void Transaction::execute(int z){
 			valid = validate();
 			if( valid > 0 && !AbortNow){
 				// the Transaction must wait here for commit dependencies if there are any
-				while(CommitDepCounter!=0 && !(AbortNow)){
+				while(CommitDepCounter!=0 && state!=State::Aborted){
 					cout << "Transaction " << (Tid - (1ull<<63))  << " is waiting for CommitDep... \n";
 					std::this_thread::sleep_for(std::chrono::milliseconds(500));
 				}
@@ -863,14 +863,12 @@ void Transaction::execute(int z){
 
 		// all commit dependent Transactions also have to abort
 		for(auto& t : CommitDepSet){
-			try{
-				auto TD = TransactionManager.at(t);
+			auto itr = TransactionManager.find(t);
+			if( itr != TransactionManager.end()){
+				auto TD = itr->second;
 				// -19: cascaded abort code
 				TD->abort(-19);
-			} catch(out_of_range& oor){
-				// the dependent Transaction does not exist or is terminated
-				continue;
-			}
+			} else throw;
 		}
 	}
 	else
