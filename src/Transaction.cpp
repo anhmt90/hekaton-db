@@ -331,8 +331,6 @@ Version* Transaction::read(string tableName, Predicate pred, bool _not_select){
 				return V;
 		}
 	}
-	if(!_not_select)
-		cout << "Reading failed from table " << tableName << "!\n";
 	return nullptr;	// V not found
 }
 
@@ -777,7 +775,7 @@ void Transaction::execute(int z){
 		auto d_tax = _district_version->d_tax;
 
 		int32_t all_local = 1;
-		for(int index = 0; index < items; ++index){
+		for(int index = 0; index <= items-1; ++index){
 			if(w_id != supware[index])
 				all_local = 0;
 		}
@@ -788,7 +786,7 @@ void Transaction::execute(int z){
 		_neworder_version = dynamic_cast<NewOrder::Tuple*>(insert("neworder", Predicate(o_id, d_id, w_id), new NewOrder::Tuple(o_id, d_id, w_id)));
 		if(!_neworder_version) {abort(-12); break;} // version not insertable
 
-		for(int index = 0; index < items; ++index){
+		for(int index = 0; index <= items-1; ++index){
 
 			_item_version = dynamic_cast<Item::Tuple*>(read("item", Predicate(itemid[index]), false));
 			if(!_item_version) {abort(-9); break;}	// version not found
